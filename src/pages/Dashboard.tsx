@@ -3,6 +3,8 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import BalanceCard from "@/components/BalanceCard";
 import DepositModal from "@/components/DepositModal";
 import WithdrawalModal from "@/components/WithdrawalModal";
+import LoanRequestModal from "@/components/LoanRequestModal";
+import FundLoanModal from "@/components/FundLoanModal";
 import { Wallet, TrendingUp, Lock, Users, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +45,9 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [loanRequestOpen, setLoanRequestOpen] = useState(false);
+  const [fundLoanOpen, setFundLoanOpen] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
@@ -126,9 +131,9 @@ const Dashboard = () => {
                 <ArrowUpRight className="h-5 w-5" />
                 <span className="text-xs">Withdraw</span>
               </Button>
-              <Button variant="secondary" className="h-auto flex-col gap-2 py-4">
+              <Button variant="secondary" className="h-auto flex-col gap-2 py-4" onClick={() => setLoanRequestOpen(true)}>
                 <TrendingUp className="h-5 w-5" />
-                <span className="text-xs">Lend</span>
+                <span className="text-xs">Request Loan</span>
               </Button>
               <Button variant="secondary" className="h-auto flex-col gap-2 py-4">
                 <Users className="h-5 w-5" />
@@ -173,7 +178,7 @@ const Dashboard = () => {
         <Card className="glass-card border-border">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="font-display text-lg">Lending Marketplace</CardTitle>
-            <Button variant="gold" size="sm">Request Loan</Button>
+            <Button variant="gold" size="sm" onClick={() => setLoanRequestOpen(true)}>Request Loan</Button>
           </CardHeader>
           <CardContent>
             {loans.length === 0 ? (
@@ -204,7 +209,9 @@ const Dashboard = () => {
                           <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success capitalize">{loan.status}</span>
                         </td>
                         <td className="py-3">
-                          <Button variant="gold-outline" size="sm">Fund</Button>
+                          {loan.status === "pending" && loan.borrower_id !== user?.id && (
+                            <Button variant="gold-outline" size="sm" onClick={() => { setSelectedLoan(loan); setFundLoanOpen(true); }}>Fund</Button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -217,6 +224,8 @@ const Dashboard = () => {
 
         <DepositModal open={depositOpen} onOpenChange={setDepositOpen} onSuccess={fetchData} />
         <WithdrawalModal open={withdrawOpen} onOpenChange={setWithdrawOpen} vaultBalance={profile?.vault_balance ?? 0} onSuccess={fetchData} />
+        <LoanRequestModal open={loanRequestOpen} onOpenChange={setLoanRequestOpen} vaultBalance={profile?.vault_balance ?? 0} frozenBalance={profile?.frozen_balance ?? 0} onSuccess={fetchData} />
+        <FundLoanModal open={fundLoanOpen} onOpenChange={setFundLoanOpen} loan={selectedLoan} vaultBalance={profile?.vault_balance ?? 0} onSuccess={fetchData} />
       </main>
     </div>
   );

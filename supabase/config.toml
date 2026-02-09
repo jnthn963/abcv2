@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.check-defaults]
 verify_jwt = false
+
+[functions.request-loan]
+verify_jwt = false
+
+[functions.fund-loan]
+verify_jwt = false
