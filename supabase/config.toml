@@ -1,1 +1,16 @@
 project_id = "trwalgesbwfsvxincldg"
+
+[functions.approve-deposit]
+verify_jwt = false
+
+[functions.approve-withdrawal]
+verify_jwt = false
+
+[functions.daily-interest]
+verify_jwt = false
+
+[functions.release-collateral]
+verify_jwt = false
+
+[functions.check-defaults]
+verify_jwt = false
