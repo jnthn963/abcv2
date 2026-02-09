@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.governor-update-setting]
 verify_jwt = false
+
+[functions.governor-distribute-profits]
+verify_jwt = false

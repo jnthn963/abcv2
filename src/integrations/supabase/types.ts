@@ -342,6 +342,10 @@ export type Database = {
         Returns: Json
       }
       atomic_default_loan: { Args: { p_loan_id: string }; Returns: Json }
+      atomic_distribute_profits: {
+        Args: { p_total_profit: number; p_year: number }
+        Returns: Json
+      }
       atomic_fund_loan: {
         Args: { p_lender_id: string; p_loan_id: string }
         Returns: Json

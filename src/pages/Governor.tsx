@@ -260,9 +260,32 @@ const Governor = () => {
             <h1 className="font-display text-2xl font-bold">Governor Panel</h1>
             <p className="text-sm text-muted-foreground">System administration & oversight</p>
           </div>
-          <Button variant="destructive" size="sm" className="w-full sm:w-auto">
+          <Button
+            variant="destructive"
+            size="sm"
+            className="w-full sm:w-auto"
+            onClick={async () => {
+              const frozen = settings.find(s => s.key === "system_frozen");
+              const newValue = frozen?.value === "true" ? "false" : "true";
+              try {
+                const res = await supabase.functions.invoke("governor-update-setting", {
+                  body: { settings: { system_frozen: newValue } },
+                });
+                if (res.error) throw res.error;
+                if (res.data?.error) throw new Error(res.data.error);
+                toast({
+                  title: newValue === "true" ? "System Frozen" : "System Resumed",
+                  description: newValue === "true" ? "All financial operations are now paused." : "Financial operations have been resumed.",
+                  variant: newValue === "true" ? "destructive" : "default",
+                });
+                fetchData();
+              } catch (e: any) {
+                toast({ title: "Error", description: e.message, variant: "destructive" });
+              }
+            }}
+          >
             <AlertTriangle className="mr-2 h-4 w-4" />
-            Emergency Kill Switch
+            {settings.find(s => s.key === "system_frozen")?.value === "true" ? "Resume System" : "Emergency Kill Switch"}
           </Button>
         </div>
 
