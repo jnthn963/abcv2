@@ -90,16 +90,16 @@ const Vault = () => {
 
   return (
     <DashboardLayout>
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold">Vault</h1>
           <p className="text-sm text-muted-foreground">Manage your deposits and withdrawals</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="gold" onClick={() => setDepositOpen(true)}>
+          <Button variant="gold" className="flex-1 sm:flex-none" onClick={() => setDepositOpen(true)}>
             <ArrowDownLeft className="mr-2 h-4 w-4" /> Deposit
           </Button>
-          <Button variant="gold-outline" onClick={() => setWithdrawOpen(true)}>
+          <Button variant="gold-outline" className="flex-1 sm:flex-none" onClick={() => setWithdrawOpen(true)}>
             <ArrowUpRight className="mr-2 h-4 w-4" /> Withdraw
           </Button>
         </div>
