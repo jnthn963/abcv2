@@ -29,6 +29,17 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
+    // Rate limit: 10 requests per 60 seconds for regular users
+    const { data: allowed } = await admin.rpc("check_rate_limit", {
+      p_user_id: user.id,
+      p_endpoint: "fund-loan",
+      p_max_requests: 10,
+      p_window_seconds: 60,
+    });
+    if (allowed === false) {
+      return new Response(JSON.stringify({ error: "Too many requests. Please try again later." }), { status: 429, headers: corsHeaders });
+    }
+
     // Check system freeze
     const { data: freezeSetting } = await admin.from("settings").select("value").eq("key", "system_frozen").maybeSingle();
     if (freezeSetting?.value === "true") {

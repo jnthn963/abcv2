@@ -212,6 +212,27 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       referrals: {
         Row: {
           created_at: string
@@ -370,6 +391,15 @@ export type Database = {
           p_loan_id: string
         }
         Returns: Json
+      }
+      check_rate_limit: {
+        Args: {
+          p_endpoint: string
+          p_max_requests: number
+          p_user_id: string
+          p_window_seconds: number
+        }
+        Returns: boolean
       }
       generate_referral_code: { Args: never; Returns: string }
       has_role: {

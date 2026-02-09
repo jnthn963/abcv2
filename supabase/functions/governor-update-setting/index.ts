@@ -35,6 +35,17 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
     }
 
+    // Rate limit: 60 requests per 60 seconds for governors
+    const { data: allowed } = await admin.rpc("check_rate_limit", {
+      p_user_id: user.id,
+      p_endpoint: "governor-update-setting",
+      p_max_requests: 60,
+      p_window_seconds: 60,
+    });
+    if (allowed === false) {
+      return new Response(JSON.stringify({ error: "Too many requests. Please try again later." }), { status: 429, headers: corsHeaders });
+    }
+
     const { settings } = await req.json();
 
     if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
