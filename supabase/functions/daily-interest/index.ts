@@ -38,6 +38,11 @@ Deno.serve(async (req) => {
     const settingsMap: Record<string, string> = {};
     settings?.forEach((s: any) => { settingsMap[s.key] = s.value; });
 
+    // Check system freeze
+    if (settingsMap["system_frozen"] === "true") {
+      return new Response(JSON.stringify({ message: "System is frozen, skipping interest distribution" }), { headers: corsHeaders });
+    }
+
     const baseRate = parseFloat(settingsMap["base_interest_rate"] || "12") / 100;
     const lenderSharePct = parseFloat(settingsMap["lender_share_pct"] || "70") / 100;
     const dailyRate = baseRate / 365;

@@ -58,12 +58,18 @@ const GovernorSettings = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const updates = Object.entries(editedValues)
+      const settingsPayload: Record<string, string> = {};
+      Object.entries(editedValues)
         .filter(([key]) => key !== "system_frozen" && key !== "deposit_qr_code_url")
-        .map(([key, value]) =>
-          supabase.from("settings").update({ value }).eq("key", key)
-        );
-      await Promise.all(updates);
+        .forEach(([key, value]) => { settingsPayload[key] = value; });
+
+      const res = await supabase.functions.invoke("governor-update-setting", {
+        body: { settings: settingsPayload },
+      });
+      if (res.error) throw res.error;
+      const data = res.data;
+      if (data?.error) throw new Error(data.error);
+
       toast({ title: "Settings saved", description: "All system parameters have been updated." });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
@@ -73,16 +79,22 @@ const GovernorSettings = () => {
 
   const handleToggleFreeze = async () => {
     const newValue = !systemFrozen;
-    const { error } = await supabase.from("settings").update({ value: String(newValue) }).eq("key", "system_frozen");
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      const res = await supabase.functions.invoke("governor-update-setting", {
+        body: { settings: { system_frozen: String(newValue) } },
+      });
+      if (res.error) throw res.error;
+      const data = res.data;
+      if (data?.error) throw new Error(data.error);
+
       setSystemFrozen(newValue);
       toast({
         title: newValue ? "System Frozen" : "System Resumed",
         description: newValue ? "All financial operations are now paused." : "Financial operations have been resumed.",
         variant: newValue ? "destructive" : "default",
       });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
     }
   };
 
@@ -106,8 +118,19 @@ const GovernorSettings = () => {
       const { error: uploadErr } = await supabase.storage.from("qr-codes").upload(filePath, qrFile, { upsert: true });
       if (uploadErr) throw uploadErr;
       const { data: urlData } = supabase.storage.from("qr-codes").getPublicUrl(filePath);
-      await supabase.from("settings").update({ value: urlData.publicUrl }).eq("key", "deposit_qr_code_url");
-      setQrUrl(urlData.publicUrl);
+      
+      // Add cache-busting parameter to force fresh fetch
+      const cacheBustedUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      
+      // Update via edge function
+      const res = await supabase.functions.invoke("governor-update-setting", {
+        body: { settings: { deposit_qr_code_url: cacheBustedUrl } },
+      });
+      if (res.error) throw res.error;
+      const data = res.data;
+      if (data?.error) throw new Error(data.error);
+
+      setQrUrl(cacheBustedUrl);
       toast({ title: "QR Code Updated", description: "Members will now see the new QR code." });
       setQrFile(null);
     } catch (e: any) {

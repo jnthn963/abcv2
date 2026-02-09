@@ -29,6 +29,12 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
+    // Check system freeze
+    const { data: freezeSetting } = await admin.from("settings").select("value").eq("key", "system_frozen").maybeSingle();
+    if (freezeSetting?.value === "true") {
+      return new Response(JSON.stringify({ error: "System is currently frozen. All financial operations are paused." }), { status: 403, headers: corsHeaders });
+    }
+
     const { principal, collateral_amount, duration_days, interest_rate } = await req.json();
 
     // Validate inputs

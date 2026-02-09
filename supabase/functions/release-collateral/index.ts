@@ -33,6 +33,12 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
 
+    // Check system freeze
+    const { data: freezeSetting } = await admin.from("settings").select("value").eq("key", "system_frozen").maybeSingle();
+    if (freezeSetting?.value === "true") {
+      return new Response(JSON.stringify({ message: "System is frozen, skipping collateral release" }), { headers: corsHeaders });
+    }
+
     const { data: loans } = await admin.from("loans").select("*").eq("status", "approved");
 
     if (!loans || loans.length === 0) {
