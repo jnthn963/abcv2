@@ -27,7 +27,6 @@ Deno.serve(async (req) => {
     if (cronSecret && token === cronSecret) {
       // Authorized cron job
     } else {
-      // Verify governor
       const anonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
       const userClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
@@ -64,32 +63,14 @@ Deno.serve(async (req) => {
       const lenderShare = dailyInterest * lenderSharePct;
       const systemShare = dailyInterest - lenderShare;
 
-      if (loan.lender_id) {
-        const { data: lenderProfile } = await admin.from("profiles").select("lending_balance").eq("user_id", loan.lender_id).single();
-        if (lenderProfile) {
-          await admin.from("profiles").update({
-            lending_balance: lenderProfile.lending_balance + lenderShare,
-          }).eq("user_id", loan.lender_id);
+      // Atomic daily interest via RPC
+      const { error: rpcErr } = await admin.rpc("atomic_daily_interest", {
+        p_loan_id: loan.id,
+        p_lender_share: lenderShare,
+        p_system_share: systemShare,
+      });
 
-          await admin.from("ledger").insert({
-            user_id: loan.lender_id,
-            type: "interest",
-            amount: lenderShare,
-            description: `Daily lending interest`,
-            reference_id: loan.id,
-          });
-        }
-      }
-
-      if (systemShare > 0) {
-        await admin.from("admin_income_ledger").insert({
-          type: "interest_spread",
-          amount: systemShare,
-          description: `Interest spread from loan ${loan.id.substring(0, 8)}`,
-        });
-      }
-
-      processed++;
+      if (!rpcErr) processed++;
     }
 
     return new Response(JSON.stringify({ message: "Interest distributed", processed }), { headers: corsHeaders });

@@ -325,6 +325,48 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      atomic_approve_deposit: {
+        Args: { p_deposit_id: string; p_fee_pct: number }
+        Returns: Json
+      }
+      atomic_approve_withdrawal: {
+        Args: { p_withdrawal_id: string }
+        Returns: Json
+      }
+      atomic_daily_interest: {
+        Args: {
+          p_lender_share: number
+          p_loan_id: string
+          p_system_share: number
+        }
+        Returns: Json
+      }
+      atomic_default_loan: { Args: { p_loan_id: string }; Returns: Json }
+      atomic_fund_loan: {
+        Args: { p_lender_id: string; p_loan_id: string }
+        Returns: Json
+      }
+      atomic_lock_collateral: {
+        Args: { p_amount: number; p_user_id: string }
+        Returns: Json
+      }
+      atomic_referral_commission: {
+        Args: { p_amount: number; p_level: number; p_user_id: string }
+        Returns: Json
+      }
+      atomic_reject_loan: {
+        Args: { p_loan_id: string; p_rejection_reason?: string }
+        Returns: Json
+      }
+      atomic_release_collateral: { Args: { p_loan_id: string }; Returns: Json }
+      atomic_repay_loan: {
+        Args: {
+          p_borrower_id: string
+          p_lender_share_pct: number
+          p_loan_id: string
+        }
+        Returns: Json
+      }
       generate_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {

@@ -57,28 +57,12 @@ Deno.serve(async (req) => {
       if (now < loanEnd) continue;
       if (loan.collateral_amount <= 0) continue;
 
-      const { data: profile } = await admin.from("profiles")
-        .select("vault_balance, frozen_balance")
-        .eq("user_id", loan.borrower_id)
-        .single();
+      // Atomic collateral release via RPC
+      const { error: rpcErr } = await admin.rpc("atomic_release_collateral", {
+        p_loan_id: loan.id,
+      });
 
-      if (profile) {
-        await admin.from("profiles").update({
-          vault_balance: profile.vault_balance + loan.collateral_amount,
-          frozen_balance: Math.max(0, profile.frozen_balance - loan.collateral_amount),
-        }).eq("user_id", loan.borrower_id);
-
-        await admin.from("ledger").insert({
-          user_id: loan.borrower_id,
-          type: "collateral_release",
-          amount: loan.collateral_amount,
-          description: `Collateral released for completed loan`,
-          reference_id: loan.id,
-        });
-      }
-
-      await admin.from("loans").update({ status: "completed" }).eq("id", loan.id);
-      released++;
+      if (!rpcErr) released++;
     }
 
     return new Response(JSON.stringify({ message: "Collateral check complete", released }), { headers: corsHeaders });

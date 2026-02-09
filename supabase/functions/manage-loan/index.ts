@@ -40,49 +40,22 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid params" }), { status: 400, headers: corsHeaders });
     }
 
-    // Get loan
-    const { data: loan, error: loanErr } = await admin.from("loans")
-      .select("*")
-      .eq("id", loanId)
-      .eq("status", "pending")
-      .single();
-
-    if (loanErr || !loan) {
-      return new Response(JSON.stringify({ error: "Loan not found or not pending" }), { status: 404, headers: corsHeaders });
-    }
-
     if (action === "rejected") {
-      await admin.from("loans").update({ status: "rejected" }).eq("id", loanId);
+      // Atomic reject loan (releases collateral) via RPC
+      const { data: result, error: rpcErr } = await admin.rpc("atomic_reject_loan", {
+        p_loan_id: loanId,
+        p_rejection_reason: rejectionReason || null,
+      });
 
-      // Release collateral back to borrower if any was locked
-      if (loan.collateral_amount > 0) {
-        const { data: borrowerProfile } = await admin.from("profiles")
-          .select("vault_balance, frozen_balance")
-          .eq("user_id", loan.borrower_id)
-          .single();
-
-        if (borrowerProfile) {
-          await admin.from("profiles").update({
-            vault_balance: borrowerProfile.vault_balance + loan.collateral_amount,
-            frozen_balance: Math.max(0, borrowerProfile.frozen_balance - loan.collateral_amount),
-          }).eq("user_id", loan.borrower_id);
-
-          await admin.from("ledger").insert({
-            user_id: loan.borrower_id,
-            type: "collateral_release",
-            amount: loan.collateral_amount,
-            description: `Collateral released - loan rejected${rejectionReason ? ': ' + rejectionReason : ''}`,
-            reference_id: loanId,
-          });
-        }
+      if (rpcErr) throw rpcErr;
+      if (result?.error) {
+        return new Response(JSON.stringify({ error: result.error }), { status: 400, headers: corsHeaders });
       }
 
       return new Response(JSON.stringify({ success: true, action: "rejected" }), { headers: corsHeaders });
     }
 
-    // Approved: loan goes to marketplace for lenders to fund
-    // The loan stays in "pending" state in the marketplace until a lender funds it via fund-loan
-    // Governor approval just validates the loan request is legitimate
+    // Approved: loan stays pending in marketplace for lenders to fund
     await admin.from("loans").update({ status: "pending" }).eq("id", loanId);
 
     return new Response(JSON.stringify({ success: true, action: "approved" }), { headers: corsHeaders });

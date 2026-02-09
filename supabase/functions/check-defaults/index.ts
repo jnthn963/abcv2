@@ -57,52 +57,12 @@ Deno.serve(async (req) => {
 
       if (now < deadline) continue;
 
-      if (loan.collateral_amount > 0 && loan.lender_id) {
-        const { data: borrowerProfile } = await admin.from("profiles")
-          .select("frozen_balance").eq("user_id", loan.borrower_id).single();
-
-        if (borrowerProfile) {
-          await admin.from("profiles").update({
-            frozen_balance: Math.max(0, borrowerProfile.frozen_balance - loan.collateral_amount),
-          }).eq("user_id", loan.borrower_id);
-        }
-
-        const { data: lenderProfile } = await admin.from("profiles")
-          .select("vault_balance, lending_balance").eq("user_id", loan.lender_id).single();
-
-        if (lenderProfile) {
-          await admin.from("profiles").update({
-            vault_balance: lenderProfile.vault_balance + loan.collateral_amount,
-            lending_balance: Math.max(0, lenderProfile.lending_balance - loan.principal),
-          }).eq("user_id", loan.lender_id);
-
-          await admin.from("ledger").insert({
-            user_id: loan.lender_id,
-            type: "default_recovery",
-            amount: loan.collateral_amount,
-            description: `Collateral seized from defaulted loan`,
-            reference_id: loan.id,
-          });
-        }
-
-        await admin.from("ledger").insert({
-          user_id: loan.borrower_id,
-          type: "default",
-          amount: -loan.collateral_amount,
-          description: `Collateral seized - loan default`,
-          reference_id: loan.id,
-        });
-      }
-
-      await admin.from("loans").update({ status: "defaulted" }).eq("id", loan.id);
-
-      await admin.from("admin_income_ledger").insert({
-        type: "default_alert",
-        amount: 0,
-        description: `Loan ${loan.id.substring(0, 8)} defaulted. Borrower: ${loan.borrower_id.substring(0, 8)}`,
+      // Atomic default loan via RPC
+      const { error: rpcErr } = await admin.rpc("atomic_default_loan", {
+        p_loan_id: loan.id,
       });
 
-      defaults++;
+      if (!rpcErr) defaults++;
     }
 
     return new Response(JSON.stringify({ message: "Default check complete", defaults }), { headers: corsHeaders });

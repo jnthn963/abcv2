@@ -34,72 +34,16 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing loanId" }), { status: 400, headers: corsHeaders });
     }
 
-    // Get loan
-    const { data: loan, error: loanErr } = await admin.from("loans")
-      .select("*")
-      .eq("id", loanId)
-      .eq("status", "pending")
-      .single();
-
-    if (loanErr || !loan) {
-      return new Response(JSON.stringify({ error: "Loan not found or not pending" }), { status: 404, headers: corsHeaders });
-    }
-
-    // Cannot fund own loan
-    if (loan.borrower_id === user.id) {
-      return new Response(JSON.stringify({ error: "Cannot fund your own loan" }), { status: 400, headers: corsHeaders });
-    }
-
-    // Get lender profile
-    const { data: lenderProfile } = await admin.from("profiles")
-      .select("vault_balance, lending_balance")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!lenderProfile || lenderProfile.vault_balance < loan.principal) {
-      return new Response(JSON.stringify({ error: "Insufficient vault balance to fund this loan" }), { status: 400, headers: corsHeaders });
-    }
-
-    // Deduct from lender vault, add to lending balance
-    await admin.from("profiles").update({
-      vault_balance: lenderProfile.vault_balance - loan.principal,
-      lending_balance: lenderProfile.lending_balance + loan.principal,
-    }).eq("user_id", user.id);
-
-    // Credit borrower vault balance with principal
-    const { data: borrowerProfile } = await admin.from("profiles")
-      .select("vault_balance")
-      .eq("user_id", loan.borrower_id)
-      .single();
-
-    if (borrowerProfile) {
-      await admin.from("profiles").update({
-        vault_balance: borrowerProfile.vault_balance + loan.principal,
-      }).eq("user_id", loan.borrower_id);
-    }
-
-    // Update loan status to approved with lender
-    await admin.from("loans").update({
-      status: "approved",
-      lender_id: user.id,
-    }).eq("id", loanId);
-
-    // Ledger entries
-    await admin.from("ledger").insert({
-      user_id: user.id,
-      type: "loan_funding",
-      amount: -loan.principal,
-      description: `Funded loan for M-${loan.borrower_id.substring(0, 4).toUpperCase()}`,
-      reference_id: loanId,
+    // Atomic fund loan via RPC
+    const { data: result, error: rpcErr } = await admin.rpc("atomic_fund_loan", {
+      p_loan_id: loanId,
+      p_lender_id: user.id,
     });
 
-    await admin.from("ledger").insert({
-      user_id: loan.borrower_id,
-      type: "loan_received",
-      amount: loan.principal,
-      description: `Loan funded by lender`,
-      reference_id: loanId,
-    });
+    if (rpcErr) throw rpcErr;
+    if (result?.error) {
+      return new Response(JSON.stringify({ error: result.error }), { status: 400, headers: corsHeaders });
+    }
 
     return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
   } catch (e) {

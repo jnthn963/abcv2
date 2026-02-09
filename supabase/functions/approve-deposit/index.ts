@@ -19,7 +19,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // User client for auth check
     const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -28,7 +27,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
 
-    // Admin client for privileged operations
     const admin = createClient(supabaseUrl, serviceKey);
 
     // Verify governor role
@@ -37,15 +35,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
     }
 
-    const { depositId, action, rejectionReason } = await req.json();
+    const { depositId, action } = await req.json();
     if (!depositId || !["approved", "rejected"].includes(action)) {
       return new Response(JSON.stringify({ error: "Invalid params" }), { status: 400, headers: corsHeaders });
-    }
-
-    // Get deposit
-    const { data: deposit, error: depErr } = await admin.from("deposits").select("*").eq("id", depositId).eq("status", "pending").single();
-    if (depErr || !deposit) {
-      return new Response(JSON.stringify({ error: "Deposit not found or not pending" }), { status: 404, headers: corsHeaders });
     }
 
     if (action === "rejected") {
@@ -53,53 +45,37 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true, action: "rejected" }), { headers: corsHeaders });
     }
 
-    // Approved: get settings for deposit fee
+    // Get fee setting
     const { data: feeSetting } = await admin.from("settings").select("value").eq("key", "deposit_fee_pct").single();
     const feePct = feeSetting ? parseFloat(feeSetting.value) : 0;
-    const fee = deposit.amount * (feePct / 100);
-    const netAmount = deposit.amount - fee;
 
-    // Update deposit status
-    await admin.from("deposits").update({ status: "approved" }).eq("id", depositId);
-
-    // Update user vault balance
-    const { data: profile } = await admin.from("profiles").select("vault_balance").eq("user_id", deposit.user_id).single();
-    const newBalance = (profile?.vault_balance || 0) + netAmount;
-    await admin.from("profiles").update({ vault_balance: newBalance }).eq("user_id", deposit.user_id);
-
-    // Record ledger entry
-    await admin.from("ledger").insert({
-      user_id: deposit.user_id,
-      type: "deposit",
-      amount: netAmount,
-      description: `Deposit approved (₳${deposit.amount} - ${feePct}% fee)`,
-      reference_id: depositId,
+    // Atomic deposit approval via RPC
+    const { data: result, error: rpcErr } = await admin.rpc("atomic_approve_deposit", {
+      p_deposit_id: depositId,
+      p_fee_pct: feePct,
     });
 
-    // Record admin income from fee
-    if (fee > 0) {
-      await admin.from("admin_income_ledger").insert({
-        type: "deposit_fee",
-        amount: fee,
-        description: `Deposit fee from ${deposit.user_id.substring(0, 8)}`,
-      });
-
-      // Distribute referral commissions from fee pool
-      await distributeReferralCommissions(admin, deposit.user_id, fee);
+    if (rpcErr) throw rpcErr;
+    if (result?.error) {
+      return new Response(JSON.stringify({ error: result.error }), { status: 400, headers: corsHeaders });
     }
 
-    return new Response(JSON.stringify({ success: true, action: "approved", netAmount, fee }), { headers: corsHeaders });
+    // Distribute referral commissions from fee pool (atomic per referrer)
+    if (result.fee > 0) {
+      await distributeReferralCommissions(admin, result.user_id, result.fee);
+    }
+
+    return new Response(JSON.stringify({ success: true, action: "approved", netAmount: result.net_amount, fee: result.fee }), { headers: corsHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: corsHeaders });
   }
 });
 
 async function distributeReferralCommissions(admin: any, userId: string, feePool: number) {
-  // Get referral chain (up to 3 levels)
   const { data: referrals } = await admin.from("referrals").select("user_id, level").eq("referred_user_id", userId).order("level");
   if (!referrals || referrals.length === 0) return;
 
-  const commissionRates = [0.05, 0.03, 0.01]; // Level 1: 5%, Level 2: 3%, Level 3: 1%
+  const commissionRates = [0.05, 0.03, 0.01];
 
   for (const ref of referrals) {
     if (ref.level < 1 || ref.level > 3) continue;
@@ -107,16 +83,11 @@ async function distributeReferralCommissions(admin: any, userId: string, feePool
     const commission = feePool * rate;
     if (commission <= 0) continue;
 
-    // Update referrer vault balance
-    const { data: refProfile } = await admin.from("profiles").select("vault_balance").eq("user_id", ref.user_id).single();
-    if (refProfile) {
-      await admin.from("profiles").update({ vault_balance: refProfile.vault_balance + commission }).eq("user_id", ref.user_id);
-      await admin.from("ledger").insert({
-        user_id: ref.user_id,
-        type: "referral",
-        amount: commission,
-        description: `Referral commission (Level ${ref.level})`,
-      });
-    }
+    // Atomic referral commission via RPC
+    await admin.rpc("atomic_referral_commission", {
+      p_user_id: ref.user_id,
+      p_amount: commission,
+      p_level: ref.level,
+    });
   }
 }

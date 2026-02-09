@@ -39,57 +39,22 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid params" }), { status: 400, headers: corsHeaders });
     }
 
-    const { data: withdrawal, error: wErr } = await admin.from("withdrawals").select("*").eq("id", withdrawalId).eq("status", "pending").single();
-    if (wErr || !withdrawal) {
-      return new Response(JSON.stringify({ error: "Withdrawal not found or not pending" }), { status: 404, headers: corsHeaders });
-    }
-
     if (action === "rejected") {
       await admin.from("withdrawals").update({ status: "rejected", rejection_reason: rejectionReason || null }).eq("id", withdrawalId);
       return new Response(JSON.stringify({ success: true, action: "rejected" }), { headers: corsHeaders });
     }
 
-    const totalDeduction = withdrawal.amount + withdrawal.fee;
-
-    // Check balance
-    const { data: profile } = await admin.from("profiles").select("vault_balance").eq("user_id", withdrawal.user_id).single();
-    if (!profile || profile.vault_balance < totalDeduction) {
-      return new Response(JSON.stringify({ error: "Insufficient balance" }), { status: 400, headers: corsHeaders });
-    }
-
-    // Update withdrawal status
-    await admin.from("withdrawals").update({ status: "approved" }).eq("id", withdrawalId);
-
-    // Deduct vault balance
-    await admin.from("profiles").update({ vault_balance: profile.vault_balance - totalDeduction }).eq("user_id", withdrawal.user_id);
-
-    // Ledger entry for withdrawal
-    await admin.from("ledger").insert({
-      user_id: withdrawal.user_id,
-      type: "withdrawal",
-      amount: -withdrawal.amount,
-      description: `Withdrawal to ${withdrawal.bank_name} ****${withdrawal.account_number.slice(-4)}`,
-      reference_id: withdrawalId,
+    // Atomic withdrawal approval via RPC
+    const { data: result, error: rpcErr } = await admin.rpc("atomic_approve_withdrawal", {
+      p_withdrawal_id: withdrawalId,
     });
 
-    // Ledger entry for fee
-    if (withdrawal.fee > 0) {
-      await admin.from("ledger").insert({
-        user_id: withdrawal.user_id,
-        type: "withdrawal_fee",
-        amount: -withdrawal.fee,
-        description: `Withdrawal processing fee`,
-        reference_id: withdrawalId,
-      });
-
-      await admin.from("admin_income_ledger").insert({
-        type: "withdrawal_fee",
-        amount: withdrawal.fee,
-        description: `Withdrawal fee from ${withdrawal.user_id.substring(0, 8)}`,
-      });
+    if (rpcErr) throw rpcErr;
+    if (result?.error) {
+      return new Response(JSON.stringify({ error: result.error }), { status: 400, headers: corsHeaders });
     }
 
-    return new Response(JSON.stringify({ success: true, action: "approved", totalDeduction }), { headers: corsHeaders });
+    return new Response(JSON.stringify({ success: true, action: "approved", totalDeduction: result.total_deduction }), { headers: corsHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: corsHeaders });
   }

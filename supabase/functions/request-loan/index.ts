@@ -35,14 +35,14 @@ Deno.serve(async (req) => {
     if (!principal || principal <= 0) {
       return new Response(JSON.stringify({ error: "Invalid principal amount" }), { status: 400, headers: corsHeaders });
     }
-    if (!collateral_amount || collateral_amount < 0) {
+    if (collateral_amount === undefined || collateral_amount < 0) {
       return new Response(JSON.stringify({ error: "Invalid collateral amount" }), { status: 400, headers: corsHeaders });
     }
     if (!duration_days || duration_days < 7 || duration_days > 365) {
       return new Response(JSON.stringify({ error: "Duration must be between 7 and 365 days" }), { status: 400, headers: corsHeaders });
     }
 
-    // Get user profile
+    // Get user profile for validation checks
     const { data: profile, error: profErr } = await admin.from("profiles")
       .select("vault_balance, frozen_balance, created_at")
       .eq("user_id", user.id)
@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Profile not found" }), { status: 404, headers: corsHeaders });
     }
 
-    // Check account age (min 6 days)
+    // Check account age
     const accountAge = (Date.now() - new Date(profile.created_at).getTime()) / 86400000;
     const { data: minAgeSetting } = await admin.from("settings").select("value").eq("key", "min_account_age_days").maybeSingle();
     const minAge = minAgeSetting ? parseFloat(minAgeSetting.value) : 6;
@@ -60,37 +60,28 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: `Account must be at least ${minAge} days old` }), { status: 400, headers: corsHeaders });
     }
 
-    // Check max loan ratio (50% of vault balance)
+    // Check max loan ratio
     const { data: ratioSetting } = await admin.from("settings").select("value").eq("key", "max_loan_ratio").maybeSingle();
     const maxRatio = ratioSetting ? parseFloat(ratioSetting.value) / 100 : 0.5;
     if (principal > profile.vault_balance * maxRatio) {
       return new Response(JSON.stringify({ error: `Loan cannot exceed ${maxRatio * 100}% of vault balance` }), { status: 400, headers: corsHeaders });
     }
 
-    // Check collateral availability
-    const availableForCollateral = profile.vault_balance - profile.frozen_balance;
-    if (collateral_amount > availableForCollateral) {
-      return new Response(JSON.stringify({ error: "Insufficient available balance for collateral" }), { status: 400, headers: corsHeaders });
-    }
-
-    // Use configured interest rate or provided one
+    // Use configured interest rate
     const { data: rateSetting } = await admin.from("settings").select("value").eq("key", "base_interest_rate").maybeSingle();
     const finalRate = interest_rate || (rateSetting ? parseFloat(rateSetting.value) : 12);
 
-    // Lock collateral
+    // Atomic collateral lock via RPC
     if (collateral_amount > 0) {
-      await admin.from("profiles").update({
-        vault_balance: profile.vault_balance - collateral_amount,
-        frozen_balance: profile.frozen_balance + collateral_amount,
-      }).eq("user_id", user.id);
-
-      // Ledger entry for collateral lock
-      await admin.from("ledger").insert({
-        user_id: user.id,
-        type: "collateral_lock",
-        amount: -collateral_amount,
-        description: `Collateral locked for loan request`,
+      const { data: lockResult, error: lockErr } = await admin.rpc("atomic_lock_collateral", {
+        p_user_id: user.id,
+        p_amount: collateral_amount,
       });
+
+      if (lockErr) throw lockErr;
+      if (lockResult?.error) {
+        return new Response(JSON.stringify({ error: lockResult.error }), { status: 400, headers: corsHeaders });
+      }
     }
 
     // Create loan
