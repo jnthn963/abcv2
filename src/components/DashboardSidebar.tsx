@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Wallet,
@@ -10,6 +10,7 @@ import {
   Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import alphaCoin from "@/assets/alpha-coin.png";
 
 const memberLinks = [
@@ -21,12 +22,15 @@ const memberLinks = [
   { to: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-interface DashboardSidebarProps {
-  isGovernor?: boolean;
-}
-
-const DashboardSidebar = ({ isGovernor }: DashboardSidebarProps) => {
+const DashboardSidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isGovernor, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar">
@@ -75,7 +79,10 @@ const DashboardSidebar = ({ isGovernor }: DashboardSidebarProps) => {
       </nav>
 
       <div className="border-t border-sidebar-border px-3 py-4">
-        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent">
+        <button
+          onClick={handleSignOut}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+        >
           <LogOut className="h-4 w-4" />
           Sign Out
         </button>
