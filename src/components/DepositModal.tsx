@@ -25,8 +25,15 @@ const DepositModal = ({ open, onOpenChange, onSuccess }: DepositModalProps) => {
   const [step, setStep] = useState<"qr" | "upload" | "done">("qr");
 
   const fetchQrCode = async () => {
+    // Always fetch fresh from DB — no caching
     const { data } = await supabase.from("settings").select("value").eq("key", "deposit_qr_code_url").single();
-    if (data) setQrCodeUrl(data.value);
+    if (data?.value) {
+      // Append fresh cache-bust to ensure browser doesn't serve stale image
+      const url = data.value.includes("?") ? data.value.split("?")[0] : data.value;
+      setQrCodeUrl(`${url}?t=${Date.now()}`);
+    } else {
+      setQrCodeUrl(null);
+    }
   };
 
   const handleOpen = (isOpen: boolean) => {

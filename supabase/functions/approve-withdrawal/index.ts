@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
+    // Verify governor role
     const { data: roleData } = await admin.from("user_roles").select("role").eq("user_id", user.id).eq("role", "governor").maybeSingle();
     if (!roleData) {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
@@ -37,6 +38,14 @@ Deno.serve(async (req) => {
     const { withdrawalId, action, rejectionReason } = await req.json();
     if (!withdrawalId || !["approved", "rejected"].includes(action)) {
       return new Response(JSON.stringify({ error: "Invalid params" }), { status: 400, headers: corsHeaders });
+    }
+
+    // Check system freeze (governor can still reject, but not approve)
+    if (action === "approved") {
+      const { data: freezeSetting } = await admin.from("settings").select("value").eq("key", "system_frozen").maybeSingle();
+      if (freezeSetting?.value === "true") {
+        return new Response(JSON.stringify({ error: "System is currently frozen. Cannot approve withdrawals." }), { status: 403, headers: corsHeaders });
+      }
     }
 
     if (action === "rejected") {

@@ -222,13 +222,14 @@ const Governor = () => {
       if (uploadErr) throw uploadErr;
 
       const { data: urlData } = supabase.storage.from("qr-codes").getPublicUrl(filePath);
+      const cacheBustedUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
-      const { data: existing } = await supabase.from("settings").select("id").eq("key", "deposit_qr_code_url").maybeSingle();
-      if (existing) {
-        await supabase.from("settings").update({ value: urlData.publicUrl }).eq("key", "deposit_qr_code_url");
-      } else {
-        toast({ title: "Note", description: "QR code URL updated. If this is the first QR code, please seed the setting row first.", variant: "destructive" });
-      }
+      // Update via edge function
+      const res = await supabase.functions.invoke("governor-update-setting", {
+        body: { settings: { deposit_qr_code_url: cacheBustedUrl } },
+      });
+      if (res.error) throw res.error;
+      if (res.data?.error) throw new Error(res.data.error);
 
       toast({ title: "QR Code Updated", description: "Members will now see the new QR code." });
       setQrFile(null);

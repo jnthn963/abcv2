@@ -35,9 +35,17 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
     }
 
+    // Check system freeze (governor can still reject, but not approve)
     const { depositId, action } = await req.json();
     if (!depositId || !["approved", "rejected"].includes(action)) {
       return new Response(JSON.stringify({ error: "Invalid params" }), { status: 400, headers: corsHeaders });
+    }
+
+    if (action === "approved") {
+      const { data: freezeSetting } = await admin.from("settings").select("value").eq("key", "system_frozen").maybeSingle();
+      if (freezeSetting?.value === "true") {
+        return new Response(JSON.stringify({ error: "System is currently frozen. Cannot approve deposits." }), { status: 403, headers: corsHeaders });
+      }
     }
 
     if (action === "rejected") {

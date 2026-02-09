@@ -40,6 +40,14 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid params" }), { status: 400, headers: corsHeaders });
     }
 
+    // Check system freeze (governor can still reject, but not approve)
+    if (action === "approved") {
+      const { data: freezeSetting } = await admin.from("settings").select("value").eq("key", "system_frozen").maybeSingle();
+      if (freezeSetting?.value === "true") {
+        return new Response(JSON.stringify({ error: "System is currently frozen. Cannot approve loans." }), { status: 403, headers: corsHeaders });
+      }
+    }
+
     if (action === "rejected") {
       // Atomic reject loan (releases collateral) via RPC
       const { data: result, error: rpcErr } = await admin.rpc("atomic_reject_loan", {
