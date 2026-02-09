@@ -1,9 +1,6 @@
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, TrendingUp, Users, Landmark } from "lucide-react";
-import alphaCoin from "@/assets/alpha-coin.png";
-import { fadeUp, staggerContainer } from "@/lib/animations";
 
 const stats = [
   { label: "Total Deposits", value: "₳2.4M", icon: Landmark },
@@ -15,46 +12,31 @@ const stats = [
 const HeroSection = () => (
   <>
     <section className="relative flex min-h-screen items-center overflow-hidden pt-20">
-      {/* Static gradient backgrounds */}
+      {/* Subtle gradient backgrounds */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-[hsl(43,72%,52%,0.06)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(43,72%,52%,0.1),transparent_60%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(220,30%,15%,0.5),transparent_60%)]" />
 
-      <div className="container relative mx-auto grid gap-12 px-6 lg:grid-cols-2 lg:gap-20">
-        {/* Left: Content */}
-        <motion.div
-          className="flex flex-col justify-center"
-          variants={staggerContainer}
-          initial="hidden"
-          animate="show"
-        >
-          <motion.div
-            variants={fadeUp}
-            className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs text-muted-foreground"
-          >
+      <div className="container relative mx-auto flex items-center justify-center px-6">
+        <div className="flex max-w-2xl flex-col items-center text-center">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
             Cooperative Banking Reimagined
-          </motion.div>
+          </div>
 
-          <motion.h1
-            variants={fadeUp}
-            className="mb-6 font-display text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl"
-          >
+          <h1 className="mb-6 font-display text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
             Your Money,{" "}
             <span className="gold-text">Your Power,</span>{" "}
             Our Cooperative
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            variants={fadeUp}
-            className="mb-8 max-w-lg text-base text-muted-foreground sm:text-lg"
-          >
+          <p className="mb-8 max-w-lg text-base text-muted-foreground sm:text-lg">
             Alpha Bankers Cooperative delivers sustainable lending yields,
             transparent governance, and community-driven growth. No fake
             interest. No hidden fees.
-          </motion.p>
+          </p>
 
-          <motion.div variants={fadeUp} className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:gap-4">
             <Button variant="gold" size="xl" asChild>
               <Link to="/register">
                 Join the Cooperative
@@ -64,43 +46,17 @@ const HeroSection = () => (
             <Button variant="gold-outline" size="xl" asChild>
               <Link to="/login">Member Login</Link>
             </Button>
-          </motion.div>
-        </motion.div>
-
-        {/* Right: Coin illustration */}
-        <motion.div
-          className="flex items-center justify-center"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.3 }}
-        >
-          <div className="relative">
-            <div className="absolute -inset-12 rounded-full bg-[radial-gradient(circle,hsl(43,72%,52%,0.12),transparent_70%)]" />
-            <div className="relative h-48 w-48 sm:h-64 sm:w-64 lg:h-80 lg:w-80">
-              <img
-                src={alphaCoin}
-                alt="Alpha Bankers Cooperative coin"
-                className="h-full w-full object-contain drop-shadow-[0_0_40px_hsl(43,72%,52%,0.25)]"
-              />
-            </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
 
     {/* Stats Bar */}
     <section className="border-y border-border bg-card/50 py-12 sm:py-16">
-      <motion.div
-        className="container mx-auto grid grid-cols-2 gap-6 px-6 sm:gap-8 md:grid-cols-4"
-        variants={staggerContainer}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: "-50px" }}
-      >
+      <div className="container mx-auto grid grid-cols-2 gap-6 px-6 sm:gap-8 md:grid-cols-4">
         {stats.map((stat) => (
-          <motion.div
+          <div
             key={stat.label}
-            variants={fadeUp}
             className="flex flex-col items-center gap-2 text-center"
           >
             <stat.icon className="h-5 w-5 text-primary" />
@@ -108,9 +64,9 @@ const HeroSection = () => (
               {stat.value}
             </p>
             <p className="text-xs text-muted-foreground sm:text-sm">{stat.label}</p>
-          </motion.div>
+          </div>
         ))}
-      </motion.div>
+      </div>
     </section>
   </>
 );
