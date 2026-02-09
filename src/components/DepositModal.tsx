@@ -41,11 +41,31 @@ const DepositModal = ({ open, onOpenChange, onSuccess }: DepositModalProps) => {
 
   const handleSubmit = async () => {
     if (!user || !amount || !file) return;
+
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 999999999) {
+      toast({ title: "Invalid Amount", description: "Enter a valid amount between 1 and 999,999,999", variant: "destructive" });
+      return;
+    }
+
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast({ title: "Invalid File", description: "Only JPEG, PNG, and WebP images are allowed", variant: "destructive" });
+      return;
+    }
+    if (file.size > MAX_SIZE) {
+      toast({ title: "File Too Large", description: "Maximum file size is 5MB", variant: "destructive" });
+      return;
+    }
+
     setIsUploading(true);
 
     try {
-      // Upload proof to storage
-      const fileExt = file.name.split(".").pop();
+      const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      if (!["jpg", "jpeg", "png", "webp"].includes(fileExt)) {
+        throw new Error("Invalid file extension");
+      }
       const filePath = `${user.id}/${Date.now()}.${fileExt}`;
       const { error: uploadErr } = await supabase.storage.from("deposit-proofs").upload(filePath, file);
       if (uploadErr) throw uploadErr;

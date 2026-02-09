@@ -141,10 +141,22 @@ const Governor = () => {
 
   const handleQrUpload = async () => {
     if (!qrFile) return;
+
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (!ALLOWED_TYPES.includes(qrFile.type)) {
+      toast({ title: "Invalid File", description: "Only JPEG, PNG, and WebP images are allowed", variant: "destructive" });
+      return;
+    }
+    if (qrFile.size > MAX_SIZE) {
+      toast({ title: "File Too Large", description: "Maximum file size is 5MB", variant: "destructive" });
+      return;
+    }
+
     setUploadingQr(true);
     try {
-      const filePath = `current-qr.${qrFile.name.split(".").pop()}`;
-      // Remove old QR if exists
+      const ext = qrFile.name.split(".").pop()?.toLowerCase() || "jpg";
+      const filePath = `current-qr.${ext}`;
       await supabase.storage.from("qr-codes").remove([filePath]);
       const { error: uploadErr } = await supabase.storage.from("qr-codes").upload(filePath, qrFile, { upsert: true });
       if (uploadErr) throw uploadErr;

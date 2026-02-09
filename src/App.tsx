@@ -11,6 +11,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Governor from "./pages/Governor";
 import Referrals from "./pages/Referrals";
+import Transactions from "./pages/Transactions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,11 @@ const App = () => (
             <Route path="/dashboard/referrals" element={
               <ProtectedRoute>
                 <Referrals />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/transactions" element={
+              <ProtectedRoute>
+                <Transactions />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />
