@@ -9,7 +9,11 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import Vault from "./pages/Vault";
+import Lending from "./pages/Lending";
+import Settings from "./pages/Settings";
 import Governor from "./pages/Governor";
+import GovernorSettings from "./pages/GovernorSettings";
 import Referrals from "./pages/Referrals";
 import Transactions from "./pages/Transactions";
 import NotFound from "./pages/NotFound";
@@ -32,9 +36,29 @@ const App = () => (
                 <Dashboard />
               </ProtectedRoute>
             } />
+            <Route path="/dashboard/vault" element={
+              <ProtectedRoute>
+                <Vault />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/lending" element={
+              <ProtectedRoute>
+                <Lending />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/settings" element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            } />
             <Route path="/governor" element={
               <ProtectedRoute requireGovernor>
                 <Governor />
+              </ProtectedRoute>
+            } />
+            <Route path="/governor/settings" element={
+              <ProtectedRoute requireGovernor>
+                <GovernorSettings />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/referrals" element={

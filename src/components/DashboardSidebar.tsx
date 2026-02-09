@@ -66,13 +66,25 @@ const DashboardSidebar = () => {
               to="/governor"
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                location.pathname.startsWith("/governor")
+                location.pathname === "/governor"
                   ? "bg-sidebar-accent text-sidebar-primary"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
             >
               <Shield className="h-4 w-4" />
               Governor Panel
+            </Link>
+            <Link
+              to="/governor/settings"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                location.pathname === "/governor/settings"
+                  ? "bg-sidebar-accent text-sidebar-primary"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              )}
+            >
+              <Settings className="h-4 w-4" />
+              System Settings
             </Link>
           </>
         )}
