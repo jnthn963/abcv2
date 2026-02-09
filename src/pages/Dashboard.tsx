@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import BalanceCard from "@/components/BalanceCard";
-import { Wallet, TrendingUp, Lock, Users, ArrowUpRight, ArrowDownLeft, Clock, Loader2 } from "lucide-react";
+import DepositModal from "@/components/DepositModal";
+import WithdrawalModal from "@/components/WithdrawalModal";
+import { Wallet, TrendingUp, Lock, Users, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,74 +41,47 @@ const Dashboard = () => {
   const [referralCount, setReferralCount] = useState(0);
   const [referralEarnings, setReferralEarnings] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!user) return;
+    setIsLoading(true);
 
-    const fetchData = async () => {
-      setIsLoading(true);
+    const [profileRes, ledgerRes, loansRes, referralsRes, referralEarningsRes] = await Promise.all([
+      supabase.from("profiles").select("vault_balance, lending_balance, frozen_balance").eq("user_id", user.id).single(),
+      supabase.from("ledger").select("id, type, amount, description, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(10),
+      supabase.from("loans").select("id, borrower_id, principal, interest_rate, duration_days, collateral_amount, status").in("status", ["approved", "pending"]).order("created_at", { ascending: false }).limit(10),
+      supabase.from("referrals").select("id").eq("user_id", user.id),
+      supabase.from("ledger").select("amount").eq("user_id", user.id).eq("type", "referral"),
+    ]);
 
-      const [profileRes, ledgerRes, loansRes, referralsRes, referralEarningsRes] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("vault_balance, lending_balance, frozen_balance")
-          .eq("user_id", user.id)
-          .single(),
-        supabase
-          .from("ledger")
-          .select("id, type, amount, description, created_at")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(10),
-        supabase
-          .from("loans")
-          .select("id, borrower_id, principal, interest_rate, duration_days, collateral_amount, status")
-          .in("status", ["approved", "pending"])
-          .order("created_at", { ascending: false })
-          .limit(10),
-        supabase
-          .from("referrals")
-          .select("id")
-          .eq("user_id", user.id),
-        supabase
-          .from("ledger")
-          .select("amount")
-          .eq("user_id", user.id)
-          .eq("type", "referral"),
-      ]);
+    if (profileRes.data) setProfile(profileRes.data);
+    if (ledgerRes.data) setTransactions(ledgerRes.data);
+    if (loansRes.data) setLoans(loansRes.data);
+    if (referralsRes.data) setReferralCount(referralsRes.data.length);
+    if (referralEarningsRes.data) {
+      setReferralEarnings(referralEarningsRes.data.reduce((sum, r) => sum + r.amount, 0));
+    }
+    setIsLoading(false);
+  };
 
-      if (profileRes.data) setProfile(profileRes.data);
-      if (ledgerRes.data) setTransactions(ledgerRes.data);
-      if (loansRes.data) setLoans(loansRes.data);
-      if (referralsRes.data) setReferralCount(referralsRes.data.length);
-      if (referralEarningsRes.data) {
-        const total = referralEarningsRes.data.reduce((sum, r) => sum + r.amount, 0);
-        setReferralEarnings(total);
-      }
-
-      setIsLoading(false);
-    };
-
-    fetchData();
-  }, [user]);
+  useEffect(() => { fetchData(); }, [user]);
 
   const formatCurrency = (amount: number) =>
     `₳${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  };
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
   const getTransactionIcon = (type: string) => {
-    if (["deposit", "interest", "referral"].includes(type)) {
+    if (["deposit", "interest", "referral", "collateral_release", "default_recovery"].includes(type)) {
       return <ArrowDownLeft className="h-4 w-4 text-success" />;
     }
     return <ArrowUpRight className="h-4 w-4 text-destructive" />;
   };
 
-  const anonymizeBorrower = (borrowerId: string) =>
-    `M-${borrowerId.substring(0, 4).toUpperCase()}`;
+  const anonymizeBorrower = (borrowerId: string) => `M-${borrowerId.substring(0, 4).toUpperCase()}`;
 
   if (isLoading) {
     return (
@@ -130,35 +105,10 @@ const Dashboard = () => {
 
         {/* Balance Cards */}
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <BalanceCard
-            title="Vault Balance"
-            amount={formatCurrency(profile?.vault_balance ?? 0)}
-            change=""
-            changeType="neutral"
-            icon={Wallet}
-            glowing
-          />
-          <BalanceCard
-            title="Lending Balance"
-            amount={formatCurrency(profile?.lending_balance ?? 0)}
-            change=""
-            changeType="neutral"
-            icon={TrendingUp}
-          />
-          <BalanceCard
-            title="Frozen Collateral"
-            amount={formatCurrency(profile?.frozen_balance ?? 0)}
-            change=""
-            changeType="neutral"
-            icon={Lock}
-          />
-          <BalanceCard
-            title="Referral Earnings"
-            amount={formatCurrency(referralEarnings)}
-            change={`${referralCount} referrals`}
-            changeType="positive"
-            icon={Users}
-          />
+          <BalanceCard title="Vault Balance" amount={formatCurrency(profile?.vault_balance ?? 0)} change="" changeType="neutral" icon={Wallet} glowing />
+          <BalanceCard title="Lending Balance" amount={formatCurrency(profile?.lending_balance ?? 0)} change="" changeType="neutral" icon={TrendingUp} />
+          <BalanceCard title="Frozen Collateral" amount={formatCurrency(profile?.frozen_balance ?? 0)} change="" changeType="neutral" icon={Lock} />
+          <BalanceCard title="Referral Earnings" amount={formatCurrency(referralEarnings)} change={`${referralCount} referrals`} changeType="positive" icon={Users} />
         </div>
 
         {/* Quick Actions + Recent Transactions */}
@@ -168,11 +118,11 @@ const Dashboard = () => {
               <CardTitle className="font-display text-lg">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-3">
-              <Button variant="gold" className="h-auto flex-col gap-2 py-4">
+              <Button variant="gold" className="h-auto flex-col gap-2 py-4" onClick={() => setDepositOpen(true)}>
                 <ArrowDownLeft className="h-5 w-5" />
                 <span className="text-xs">Deposit</span>
               </Button>
-              <Button variant="gold-outline" className="h-auto flex-col gap-2 py-4">
+              <Button variant="gold-outline" className="h-auto flex-col gap-2 py-4" onClick={() => setWithdrawOpen(true)}>
                 <ArrowUpRight className="h-5 w-5" />
                 <span className="text-xs">Withdraw</span>
               </Button>
@@ -199,9 +149,7 @@ const Dashboard = () => {
                   transactions.map((tx) => (
                     <div key={tx.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-primary/10 p-2">
-                          {getTransactionIcon(tx.type)}
-                        </div>
+                        <div className="rounded-lg bg-primary/10 p-2">{getTransactionIcon(tx.type)}</div>
                         <div>
                           <p className="text-sm font-medium">{tx.description}</p>
                           <p className="text-xs text-muted-foreground">{formatDate(tx.created_at)}</p>
@@ -253,9 +201,7 @@ const Dashboard = () => {
                         <td className="py-3">{loan.duration_days} days</td>
                         <td className="py-3">{formatCurrency(loan.collateral_amount)}</td>
                         <td className="py-3">
-                          <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success capitalize">
-                            {loan.status}
-                          </span>
+                          <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success capitalize">{loan.status}</span>
                         </td>
                         <td className="py-3">
                           <Button variant="gold-outline" size="sm">Fund</Button>
@@ -268,6 +214,9 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        <DepositModal open={depositOpen} onOpenChange={setDepositOpen} onSuccess={fetchData} />
+        <WithdrawalModal open={withdrawOpen} onOpenChange={setWithdrawOpen} vaultBalance={profile?.vault_balance ?? 0} onSuccess={fetchData} />
       </main>
     </div>
   );

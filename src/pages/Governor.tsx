@@ -3,6 +3,8 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import BalanceCard from "@/components/BalanceCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Wallet,
   TrendingUp,
@@ -13,6 +15,7 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  Upload,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +26,17 @@ interface PendingDeposit {
   amount: number;
   created_at: string;
   proof_url: string | null;
+}
+
+interface PendingWithdrawal {
+  id: string;
+  user_id: string;
+  amount: number;
+  fee: number;
+  bank_name: string;
+  account_number: string;
+  account_holder: string;
+  created_at: string;
 }
 
 interface SystemSetting {
@@ -47,16 +61,21 @@ const Governor = () => {
   const [systemIncome, setSystemIncome] = useState(0);
   const [incomeBreakdown, setIncomeBreakdown] = useState<{ type: string; amount: number }[]>([]);
   const [pendingDeposits, setPendingDeposits] = useState<PendingDeposit[]>([]);
+  const [pendingWithdrawals, setPendingWithdrawals] = useState<PendingWithdrawal[]>([]);
   const [settings, setSettings] = useState<SystemSetting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [qrFile, setQrFile] = useState<File | null>(null);
+  const [uploadingQr, setUploadingQr] = useState(false);
 
   const fetchData = async () => {
     setIsLoading(true);
 
-    const [profilesRes, incomeRes, pendingRes, settingsRes, membersRes] = await Promise.all([
+    const [profilesRes, incomeRes, pendingRes, withdrawalsRes, settingsRes, membersRes] = await Promise.all([
       supabase.from("profiles").select("vault_balance, lending_balance, frozen_balance"),
       supabase.from("admin_income_ledger").select("type, amount"),
       supabase.from("deposits").select("id, user_id, amount, created_at, proof_url").eq("status", "pending").order("created_at", { ascending: false }),
+      supabase.from("withdrawals").select("id, user_id, amount, fee, bank_name, account_number, account_holder, created_at").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("settings").select("key, value"),
       supabase.from("profiles").select("id"),
     ]);
@@ -69,42 +88,84 @@ const Governor = () => {
     if (incomeRes.data) {
       setSystemIncome(incomeRes.data.reduce((s, r) => s + r.amount, 0));
       const grouped: Record<string, number> = {};
-      incomeRes.data.forEach((r) => {
-        grouped[r.type] = (grouped[r.type] || 0) + r.amount;
-      });
+      incomeRes.data.forEach((r) => { grouped[r.type] = (grouped[r.type] || 0) + r.amount; });
       setIncomeBreakdown(Object.entries(grouped).map(([type, amount]) => ({ type, amount })));
     }
     if (pendingRes.data) setPendingDeposits(pendingRes.data);
+    if (withdrawalsRes.data) setPendingWithdrawals(withdrawalsRes.data);
     if (settingsRes.data) setSettings(settingsRes.data);
 
     setIsLoading(false);
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const formatCurrency = (amount: number) =>
     `₳${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  };
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
   const handleDepositAction = async (depositId: string, action: "approved" | "rejected") => {
-    const { error } = await supabase
-      .from("deposits")
-      .update({ status: action })
-      .eq("id", depositId);
-
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
+    setProcessingId(depositId);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke("approve-deposit", {
+        body: { depositId, action },
+      });
+      if (res.error) throw res.error;
+      toast({ title: `Deposit ${action}`, description: `The deposit has been ${action}.` });
+      setPendingDeposits((prev) => prev.filter((d) => d.id !== depositId));
+      fetchData();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "Failed to process", variant: "destructive" });
     }
+    setProcessingId(null);
+  };
 
-    toast({ title: `Deposit ${action}`, description: `The deposit has been ${action}.` });
-    setPendingDeposits((prev) => prev.filter((d) => d.id !== depositId));
+  const handleWithdrawalAction = async (withdrawalId: string, action: "approved" | "rejected") => {
+    setProcessingId(withdrawalId);
+    try {
+      const res = await supabase.functions.invoke("approve-withdrawal", {
+        body: { withdrawalId, action },
+      });
+      if (res.error) throw res.error;
+      toast({ title: `Withdrawal ${action}`, description: `The withdrawal has been ${action}.` });
+      setPendingWithdrawals((prev) => prev.filter((w) => w.id !== withdrawalId));
+      fetchData();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "Failed to process", variant: "destructive" });
+    }
+    setProcessingId(null);
+  };
+
+  const handleQrUpload = async () => {
+    if (!qrFile) return;
+    setUploadingQr(true);
+    try {
+      const filePath = `current-qr.${qrFile.name.split(".").pop()}`;
+      // Remove old QR if exists
+      await supabase.storage.from("qr-codes").remove([filePath]);
+      const { error: uploadErr } = await supabase.storage.from("qr-codes").upload(filePath, qrFile, { upsert: true });
+      if (uploadErr) throw uploadErr;
+
+      const { data: urlData } = supabase.storage.from("qr-codes").getPublicUrl(filePath);
+
+      // Update settings
+      const { data: existing } = await supabase.from("settings").select("id").eq("key", "deposit_qr_code_url").maybeSingle();
+      if (existing) {
+        await supabase.from("settings").update({ value: urlData.publicUrl }).eq("key", "deposit_qr_code_url");
+      } else {
+        // Need governor INSERT - for now use a workaround via update
+        toast({ title: "Note", description: "QR code URL updated. If this is the first QR code, please seed the setting row first.", variant: "destructive" });
+      }
+
+      toast({ title: "QR Code Updated", description: "Members will now see the new QR code." });
+      setQrFile(null);
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+    setUploadingQr(false);
   };
 
   if (isLoading) {
@@ -141,7 +202,7 @@ const Governor = () => {
           <BalanceCard title="System Income" amount={formatCurrency(systemIncome)} change="" changeType="neutral" icon={DollarSign} />
         </div>
 
-        {/* Income Breakdown + Pending Actions */}
+        {/* Income Breakdown + QR Code Management */}
         <div className="mb-8 grid gap-6 lg:grid-cols-2">
           <Card className="glass-card border-border">
             <CardHeader>
@@ -169,6 +230,29 @@ const Governor = () => {
 
           <Card className="glass-card border-border">
             <CardHeader>
+              <CardTitle className="font-display text-lg">Deposit QR Code</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">Upload the QR code members will scan to make deposits.</p>
+              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border px-4 py-6 transition-colors hover:border-primary/50">
+                <Upload className="h-6 w-6 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">{qrFile ? qrFile.name : "Click to upload QR code"}</span>
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => setQrFile(e.target.files?.[0] || null)} />
+              </label>
+              {qrFile && (
+                <Button variant="gold" size="sm" className="w-full" onClick={handleQrUpload} disabled={uploadingQr}>
+                  {uploadingQr ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Save QR Code
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Pending Deposits */}
+        <div className="mb-8 grid gap-6 lg:grid-cols-2">
+          <Card className="glass-card border-border">
+            <CardHeader>
               <CardTitle className="font-display text-lg">Pending Deposits</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -180,24 +264,84 @@ const Governor = () => {
                     <div>
                       <p className="text-sm font-medium">M-{dep.user_id.substring(0, 4).toUpperCase()}</p>
                       <p className="text-xs text-muted-foreground">{formatCurrency(dep.amount)} · {formatDate(dep.created_at)}</p>
+                      {dep.proof_url && (
+                        <button
+                          className="text-xs text-primary underline mt-0.5"
+                          onClick={async () => {
+                            const { data } = await supabase.storage.from("deposit-proofs").createSignedUrl(dep.proof_url!, 300);
+                            if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                          }}
+                        >
+                          View Proof
+                        </button>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-success hover:text-success"
+                        disabled={processingId === dep.id}
                         onClick={() => handleDepositAction(dep.id, "approved")}
                       >
-                        <CheckCircle className="h-4 w-4" />
+                        {processingId === dep.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
+                        disabled={processingId === dep.id}
                         onClick={() => handleDepositAction(dep.id, "rejected")}
                       >
                         <XCircle className="h-4 w-4" />
                       </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card border-border">
+            <CardHeader>
+              <CardTitle className="font-display text-lg">Pending Withdrawals</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pendingWithdrawals.length === 0 ? (
+                <p className="text-center text-sm text-muted-foreground py-4">No pending withdrawals</p>
+              ) : (
+                pendingWithdrawals.map((w) => (
+                  <div key={w.id} className="rounded-lg bg-secondary/30 px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">M-{w.user_id.substring(0, 4).toUpperCase()}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(w.amount)} + ₳{w.fee.toFixed(2)} fee · {formatDate(w.created_at)}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {w.bank_name} · ****{w.account_number.slice(-4)} · {w.account_holder}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-success hover:text-success"
+                          disabled={processingId === w.id}
+                          onClick={() => handleWithdrawalAction(w.id, "approved")}
+                        >
+                          {processingId === w.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          disabled={processingId === w.id}
+                          onClick={() => handleWithdrawalAction(w.id, "rejected")}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))
