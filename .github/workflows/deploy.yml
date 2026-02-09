@@ -6,32 +6,40 @@ on:
       - main
 
 jobs:
-  build-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
+      # 1️⃣ Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # 2️⃣ Setup Node.js
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: 18
 
       # 3️⃣ Install dependencies
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
-      # 4️⃣ Build production files
-      - name: Build app
+      # 4️⃣ Build project (Lovable / Vite / React)
+      - name: Build project
         run: npm run build
 
-      # 5️⃣ Deploy ONLY dist/ to Hostinger
-      - name: Deploy to Hostinger (dist only)
-        uses: SamKirkland/FTP-Deploy-Action@v4
+      # 5️⃣ Verify dist folder exists
+      - name: Verify build output
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "❌ dist folder not found. Build failed."
+            exit 1
+          fi
+          echo "✅ dist folder found"
+
+      # 6️⃣ Deploy dist/ to Hostinger public_html
+      - name: Deploy to Hostinger via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.HOSTINGER_FTP_SERVER }}
           username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
