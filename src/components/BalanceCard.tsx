@@ -1,5 +1,7 @@
+import { motion } from "framer-motion";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { cardHover } from "@/lib/animations";
 
 interface BalanceCardProps {
   title: string;
@@ -12,7 +14,10 @@ interface BalanceCardProps {
 
 const BalanceCard = ({ title, amount, change, changeType = "neutral", icon: Icon, glowing }: BalanceCardProps) => {
   return (
-    <div className={cn("glass-card rounded-xl p-6 transition-all", glowing && "glow-gold")}>
+    <motion.div
+      className={cn("glass-card rounded-xl p-6 transition-shadow", glowing && "glow-gold")}
+      whileHover={cardHover}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-muted-foreground">{title}</p>
@@ -34,7 +39,7 @@ const BalanceCard = ({ title, amount, change, changeType = "neutral", icon: Icon
           <Icon className="h-5 w-5" />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

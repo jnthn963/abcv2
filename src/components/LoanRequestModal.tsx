@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import SuccessAnimation from "@/components/SuccessAnimation";
 
 interface LoanRequestModalProps {
   open: boolean;
@@ -95,19 +96,19 @@ const LoanRequestModal = ({ open, onOpenChange, vaultBalance, frozenBalance, onS
 
             <div className="space-y-2">
               <Label>Loan Amount (₳)</Label>
-              <Input type="number" min="1" placeholder="Enter principal amount" value={principal} onChange={(e) => setPrincipal(e.target.value)} />
+              <Input type="number" min="1" placeholder="Enter principal amount" value={principal} onChange={(e) => setPrincipal(e.target.value)} className="transition-shadow focus:shadow-[0_0_0_2px_hsl(43,72%,52%,0.2)]" />
               <p className="text-xs text-muted-foreground">Max: ₳{maxLoan.toFixed(2)} (50% of vault)</p>
             </div>
 
             <div className="space-y-2">
               <Label>Collateral Amount (₳)</Label>
-              <Input type="number" min="0" placeholder="Enter collateral" value={collateral} onChange={(e) => setCollateral(e.target.value)} />
+              <Input type="number" min="0" placeholder="Enter collateral" value={collateral} onChange={(e) => setCollateral(e.target.value)} className="transition-shadow focus:shadow-[0_0_0_2px_hsl(43,72%,52%,0.2)]" />
               <p className="text-xs text-muted-foreground">Locked until loan is repaid or completed</p>
             </div>
 
             <div className="space-y-2">
               <Label>Duration (days)</Label>
-              <Input type="number" min="7" max="365" placeholder="28" value={duration} onChange={(e) => setDuration(e.target.value)} />
+              <Input type="number" min="7" max="365" placeholder="28" value={duration} onChange={(e) => setDuration(e.target.value)} className="transition-shadow focus:shadow-[0_0_0_2px_hsl(43,72%,52%,0.2)]" />
             </div>
 
             {errors.length > 0 && (
@@ -147,17 +148,10 @@ const LoanRequestModal = ({ open, onOpenChange, vaultBalance, frozenBalance, onS
         )}
 
         {step === "done" && (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <div className="h-16 w-16 rounded-full bg-success/20 flex items-center justify-center">
-              <svg className="h-8 w-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p className="font-display font-semibold">Loan Request Submitted!</p>
-            <p className="text-sm text-muted-foreground text-center">
-              Your loan of ₳{parsedPrincipal.toLocaleString()} is now listed in the marketplace.
-            </p>
-          </div>
+          <SuccessAnimation
+            title="Loan Request Submitted!"
+            description={`Your loan of ₳${parsedPrincipal.toLocaleString()} is now listed in the marketplace.`}
+          />
         )}
       </DialogContent>
     </Dialog>

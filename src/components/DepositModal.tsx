@@ -7,6 +7,7 @@ import { Loader2, Upload, QrCode } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import SuccessAnimation from "@/components/SuccessAnimation";
 
 interface DepositModalProps {
   open: boolean;
@@ -23,7 +24,6 @@ const DepositModal = ({ open, onOpenChange, onSuccess }: DepositModalProps) => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [step, setStep] = useState<"qr" | "upload" | "done">("qr");
 
-  // Fetch QR code on open
   const fetchQrCode = async () => {
     const { data } = await supabase.from("settings").select("value").eq("key", "deposit_qr_code_url").single();
     if (data) setQrCodeUrl(data.value);
@@ -70,7 +70,6 @@ const DepositModal = ({ open, onOpenChange, onSuccess }: DepositModalProps) => {
       const { error: uploadErr } = await supabase.storage.from("deposit-proofs").upload(filePath, file);
       if (uploadErr) throw uploadErr;
 
-      // Create deposit record (store file path, not public URL - bucket is private)
       const { error: insertErr } = await supabase.from("deposits").insert({
         user_id: user.id,
         amount: parseFloat(amount),
@@ -130,11 +129,12 @@ const DepositModal = ({ open, onOpenChange, onSuccess }: DepositModalProps) => {
                 placeholder="Enter deposit amount"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                className="transition-shadow focus:shadow-[0_0_0_2px_hsl(43,72%,52%,0.2)]"
               />
             </div>
             <div className="space-y-2">
               <Label>Payment Screenshot</Label>
-              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border px-4 py-8 transition-colors hover:border-primary/50">
+              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border px-4 py-8 transition-all hover:border-primary/50 hover:bg-primary/5">
                 <Upload className="h-8 w-8 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
                   {file ? file.name : "Click to upload screenshot"}
@@ -166,17 +166,10 @@ const DepositModal = ({ open, onOpenChange, onSuccess }: DepositModalProps) => {
         )}
 
         {step === "done" && (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <div className="h-16 w-16 rounded-full bg-success/20 flex items-center justify-center">
-              <svg className="h-8 w-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p className="font-display font-semibold">Deposit Submitted!</p>
-            <p className="text-sm text-muted-foreground text-center">
-              Your deposit of ₳{parseFloat(amount).toLocaleString()} is pending approval.
-            </p>
-          </div>
+          <SuccessAnimation
+            title="Deposit Submitted!"
+            description={`Your deposit of ₳${parseFloat(amount).toLocaleString()} is pending approval.`}
+          />
         )}
       </DialogContent>
     </Dialog>

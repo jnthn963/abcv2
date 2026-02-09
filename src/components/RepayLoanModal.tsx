@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import SuccessAnimation from "@/components/SuccessAnimation";
 
 interface Loan {
   id: string;
@@ -146,17 +147,10 @@ const RepayLoanModal = ({ open, onOpenChange, loan, vaultBalance, onSuccess }: R
         )}
 
         {step === "done" && loan && (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <div className="h-16 w-16 rounded-full bg-success/20 flex items-center justify-center">
-              <svg className="h-8 w-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p className="font-display font-semibold">Loan Repaid!</p>
-            <p className="text-sm text-muted-foreground text-center">
-              {formatCurrency(totalOwed)} has been deducted and your collateral has been released.
-            </p>
-          </div>
+          <SuccessAnimation
+            title="Loan Repaid!"
+            description={`${formatCurrency(totalOwed)} has been deducted and your collateral has been released.`}
+          />
         )}
       </DialogContent>
     </Dialog>
