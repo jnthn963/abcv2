@@ -55,7 +55,8 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ success: true, action: "approved", totalDeduction: result.total_deduction }), { headers: corsHeaders });
-  } catch (e) {
+  } catch (e: any) {
+    console.error('approve-withdrawal error:', { error: e?.message, stack: e?.stack, timestamp: new Date().toISOString() });
     return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: corsHeaders });
   }
 });

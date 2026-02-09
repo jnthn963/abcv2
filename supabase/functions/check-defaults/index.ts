@@ -66,7 +66,8 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ message: "Default check complete", defaults }), { headers: corsHeaders });
-  } catch (e) {
+  } catch (e: any) {
+    console.error('check-defaults error:', { error: e?.message, stack: e?.stack, timestamp: new Date().toISOString() });
     return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: corsHeaders });
   }
 });
