@@ -55,6 +55,7 @@ const Register = () => {
           data: {
             first_name: result.data.firstName,
             last_name: result.data.lastName,
+            referral_code: result.data.referralCode || null,
           },
         },
       });
