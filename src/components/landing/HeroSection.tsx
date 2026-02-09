@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
@@ -17,12 +16,7 @@ const HeroSection = () => (
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(43,72%,52%,0.08),transparent_60%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(220,30%,20%,0.4),transparent_60%)]" />
       <div className="container relative mx-auto grid gap-12 px-6 lg:grid-cols-2 lg:gap-20">
-        <motion.div
-          className="flex flex-col justify-center"
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.7 }}
-        >
+        <div className="flex flex-col justify-center">
           <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
             Cooperative Banking Reimagined
@@ -46,41 +40,29 @@ const HeroSection = () => (
               <Link to="/login">Member Login</Link>
             </Button>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          className="flex items-center justify-center"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.7, delay: 0.2 }}
-        >
+        <div className="flex items-center justify-center">
           <div className="relative">
             <div className="absolute -inset-8 rounded-full bg-[radial-gradient(circle,hsl(43,72%,52%,0.15),transparent_70%)]" />
             <img
               src={alphaCoin}
               alt="Alpha Bankers Cooperative"
-              className="relative w-72 drop-shadow-2xl animate-float sm:w-96"
+              className="relative w-72 drop-shadow-2xl sm:w-96"
             />
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
 
     {/* Stats Bar */}
     <section className="border-y border-border bg-card/50 py-16">
       <div className="container mx-auto grid grid-cols-2 gap-8 px-6 md:grid-cols-4">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            className="text-center"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.1 }}
-          >
+        {stats.map((stat) => (
+          <div key={stat.label} className="text-center">
             <p className="font-display text-3xl font-bold gold-text sm:text-4xl">{stat.value}</p>
             <p className="mt-1 text-sm text-muted-foreground">{stat.label}</p>
-          </motion.div>
+          </div>
         ))}
       </div>
     </section>

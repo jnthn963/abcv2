@@ -254,12 +254,12 @@ const Governor = () => {
 
   return (
     <DashboardLayout>
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold">Governor Panel</h1>
             <p className="text-sm text-muted-foreground">System administration & oversight</p>
           </div>
-          <Button variant="destructive" size="sm">
+          <Button variant="destructive" size="sm" className="w-full sm:w-auto">
             <AlertTriangle className="mr-2 h-4 w-4" />
             Emergency Kill Switch
           </Button>
@@ -464,12 +464,12 @@ const Governor = () => {
           {/* Loans Tab */}
           <TabsContent value="loans">
             <Card className="glass-card border-border">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="font-display text-lg flex items-center gap-2">
                   <Landmark className="h-5 w-5 text-primary" />
                   Loan Management
                 </CardTitle>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {["all", "pending", "approved", "completed", "defaulted", "rejected"].map((f) => (
                     <Button
                       key={f}

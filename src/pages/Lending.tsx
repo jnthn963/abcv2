@@ -140,12 +140,12 @@ const Lending = () => {
 
   return (
     <DashboardLayout>
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold">Lending</h1>
           <p className="text-sm text-muted-foreground">Browse the marketplace, fund loans, or request one</p>
         </div>
-        <Button variant="gold" onClick={() => setLoanRequestOpen(true)}>
+        <Button variant="gold" className="w-full sm:w-auto" onClick={() => setLoanRequestOpen(true)}>
           <Landmark className="mr-2 h-4 w-4" /> Request Loan
         </Button>
       </div>
