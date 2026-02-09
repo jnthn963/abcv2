@@ -15,28 +15,31 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Auth check: require governor or cron invocation via Authorization header
+    // Auth check: require CRON_SECRET or governor JWT
     const authHeader = req.headers.get("Authorization");
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.replace("Bearer ", "");
-      const anonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
-      // If it's not the anon key (cron), verify it's a governor
-      if (token !== anonKey) {
-        const userClient = createClient(supabaseUrl, anonKey, {
-          global: { headers: { Authorization: authHeader } },
-        });
-        const { data: { user }, error: authErr } = await userClient.auth.getUser();
-        if (authErr || !user) {
-          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
-        }
-        const { data: roleData } = await admin.from("user_roles").select("role").eq("user_id", user.id).eq("role", "governor").maybeSingle();
-        if (!roleData) {
-          return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
-        }
-      }
-      // If token === anonKey, it's the cron job — allowed
-    } else {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Missing authorization" }), { status: 401, headers: corsHeaders });
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const cronSecret = Deno.env.get("CRON_SECRET");
+
+    if (cronSecret && token === cronSecret) {
+      // Authorized cron job
+    } else {
+      // Verify governor
+      const anonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user }, error: authErr } = await userClient.auth.getUser();
+      if (authErr || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+      }
+      const { data: roleData } = await admin.from("user_roles").select("role").eq("user_id", user.id).eq("role", "governor").maybeSingle();
+      if (!roleData) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
+      }
     }
 
     // Get settings
@@ -48,7 +51,6 @@ Deno.serve(async (req) => {
     const lenderSharePct = parseFloat(settingsMap["lender_share_pct"] || "70") / 100;
     const dailyRate = baseRate / 365;
 
-    // Get all active (approved) loans with lenders
     const { data: activeLoans } = await admin.from("loans").select("*").eq("status", "approved").not("lender_id", "is", null);
 
     if (!activeLoans || activeLoans.length === 0) {
