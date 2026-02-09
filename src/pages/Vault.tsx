@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import DashboardSidebar from "@/components/DashboardSidebar";
+import DashboardLayout from "@/components/DashboardLayout";
 import BalanceCard from "@/components/BalanceCard";
 import DepositModal from "@/components/DepositModal";
 import WithdrawalModal from "@/components/WithdrawalModal";
@@ -78,107 +78,101 @@ const Vault = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <DashboardSidebar />
-        <main className="ml-64 flex flex-1 items-center justify-center">
+      <DashboardLayout>
+        <div className="flex flex-1 items-center justify-center py-24">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </main>
-      </div>
+        </div>
+      </DashboardLayout>
     );
   }
 
   const totalBalance = vaultBalance + lendingBalance + frozenBalance;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <DashboardSidebar />
-      <main className="ml-64 flex-1 p-8">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-bold">Vault</h1>
-            <p className="text-sm text-muted-foreground">Manage your deposits and withdrawals</p>
-          </div>
-          <div className="flex gap-3">
-            <Button variant="gold" onClick={() => setDepositOpen(true)}>
-              <ArrowDownLeft className="mr-2 h-4 w-4" /> Deposit
-            </Button>
-            <Button variant="gold-outline" onClick={() => setWithdrawOpen(true)}>
-              <ArrowUpRight className="mr-2 h-4 w-4" /> Withdraw
-            </Button>
-          </div>
+    <DashboardLayout>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold">Vault</h1>
+          <p className="text-sm text-muted-foreground">Manage your deposits and withdrawals</p>
         </div>
-
-        {/* Balance Cards */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <BalanceCard title="Total Balance" amount={formatCurrency(totalBalance)} icon={Wallet} glowing />
-          <BalanceCard title="Vault Balance" amount={formatCurrency(vaultBalance)} icon={Wallet} />
-          <BalanceCard title="Lending Balance" amount={formatCurrency(lendingBalance)} icon={TrendingUp} />
-          <BalanceCard title="Frozen Collateral" amount={formatCurrency(frozenBalance)} icon={Lock} />
+        <div className="flex gap-3">
+          <Button variant="gold" onClick={() => setDepositOpen(true)}>
+            <ArrowDownLeft className="mr-2 h-4 w-4" /> Deposit
+          </Button>
+          <Button variant="gold-outline" onClick={() => setWithdrawOpen(true)}>
+            <ArrowUpRight className="mr-2 h-4 w-4" /> Withdraw
+          </Button>
         </div>
+      </div>
 
-        {/* Deposit & Withdrawal History */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="glass-card border-border">
-            <CardHeader>
-              <CardTitle className="font-display text-lg">Deposit History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {deposits.length === 0 ? (
-                  <p className="text-center text-sm text-muted-foreground py-8">No deposits yet</p>
-                ) : (
-                  deposits.map((dep) => (
-                    <div key={dep.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-success/10 p-2">
-                          <ArrowDownLeft className="h-4 w-4 text-success" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">{formatCurrency(dep.amount)}</p>
-                          <p className="text-xs text-muted-foreground">{formatDate(dep.created_at)}</p>
-                        </div>
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <BalanceCard title="Total Balance" amount={formatCurrency(totalBalance)} icon={Wallet} glowing />
+        <BalanceCard title="Vault Balance" amount={formatCurrency(vaultBalance)} icon={Wallet} />
+        <BalanceCard title="Lending Balance" amount={formatCurrency(lendingBalance)} icon={TrendingUp} />
+        <BalanceCard title="Frozen Collateral" amount={formatCurrency(frozenBalance)} icon={Lock} />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="glass-card border-border">
+          <CardHeader>
+            <CardTitle className="font-display text-lg">Deposit History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {deposits.length === 0 ? (
+                <p className="text-center text-sm text-muted-foreground py-8">No deposits yet</p>
+              ) : (
+                deposits.map((dep) => (
+                  <div key={dep.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-lg bg-success/10 p-2">
+                        <ArrowDownLeft className="h-4 w-4 text-success" />
                       </div>
-                      {statusBadge(dep.status)}
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card border-border">
-            <CardHeader>
-              <CardTitle className="font-display text-lg">Withdrawal History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {withdrawals.length === 0 ? (
-                  <p className="text-center text-sm text-muted-foreground py-8">No withdrawals yet</p>
-                ) : (
-                  withdrawals.map((w) => (
-                    <div key={w.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-destructive/10 p-2">
-                          <ArrowUpRight className="h-4 w-4 text-destructive" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">{formatCurrency(w.amount)}</p>
-                          <p className="text-xs text-muted-foreground">{formatDate(w.created_at)} · Fee: ₳{w.fee}</p>
-                        </div>
+                      <div>
+                        <p className="text-sm font-medium">{formatCurrency(dep.amount)}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(dep.created_at)}</p>
                       </div>
-                      {statusBadge(w.status)}
                     </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                    {statusBadge(dep.status)}
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-        <DepositModal open={depositOpen} onOpenChange={setDepositOpen} onSuccess={fetchData} />
-        <WithdrawalModal open={withdrawOpen} onOpenChange={setWithdrawOpen} vaultBalance={vaultBalance} onSuccess={fetchData} />
-      </main>
-    </div>
+        <Card className="glass-card border-border">
+          <CardHeader>
+            <CardTitle className="font-display text-lg">Withdrawal History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {withdrawals.length === 0 ? (
+                <p className="text-center text-sm text-muted-foreground py-8">No withdrawals yet</p>
+              ) : (
+                withdrawals.map((w) => (
+                  <div key={w.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-lg bg-destructive/10 p-2">
+                        <ArrowUpRight className="h-4 w-4 text-destructive" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{formatCurrency(w.amount)}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(w.created_at)} · Fee: ₳{w.fee}</p>
+                      </div>
+                    </div>
+                    {statusBadge(w.status)}
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <DepositModal open={depositOpen} onOpenChange={setDepositOpen} onSuccess={fetchData} />
+      <WithdrawalModal open={withdrawOpen} onOpenChange={setWithdrawOpen} vaultBalance={vaultBalance} onSuccess={fetchData} />
+    </DashboardLayout>
   );
 };
 

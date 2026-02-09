@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import DashboardSidebar from "@/components/DashboardSidebar";
+import DashboardLayout from "@/components/DashboardLayout";
 import BalanceCard from "@/components/BalanceCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -244,19 +244,16 @@ const Governor = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <DashboardSidebar />
-        <main className="ml-64 flex flex-1 items-center justify-center">
+      <DashboardLayout>
+        <div className="flex flex-1 items-center justify-center py-24">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </main>
-      </div>
+        </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <DashboardSidebar />
-      <main className="ml-64 flex-1 p-8">
+    <DashboardLayout>
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold">Governor Panel</h1>
@@ -665,8 +662,7 @@ const Governor = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </main>
-    </div>
+    </DashboardLayout>
   );
 };
 
