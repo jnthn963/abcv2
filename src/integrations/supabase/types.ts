@@ -14,16 +14,286 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      admin_income_ledger: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string
+          id?: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      deposits: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          proof_url: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          proof_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          proof_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ledger: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          reference_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string
+          id?: string
+          reference_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          reference_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      loans: {
+        Row: {
+          borrower_id: string
+          collateral_amount: number
+          created_at: string
+          duration_days: number
+          id: string
+          interest_rate: number
+          lender_id: string | null
+          principal: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          borrower_id: string
+          collateral_amount?: number
+          created_at?: string
+          duration_days?: number
+          id?: string
+          interest_rate?: number
+          lender_id?: string | null
+          principal: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          borrower_id?: string
+          collateral_amount?: number
+          created_at?: string
+          duration_days?: number
+          id?: string
+          interest_rate?: number
+          lender_id?: string | null
+          principal?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          first_name: string
+          frozen_balance: number
+          id: string
+          kyc_status: string
+          last_name: string
+          lending_balance: number
+          referral_code: string | null
+          referred_by: string | null
+          tier: string
+          updated_at: string
+          user_id: string
+          vault_balance: number
+        }
+        Insert: {
+          created_at?: string
+          email?: string
+          first_name?: string
+          frozen_balance?: number
+          id?: string
+          kyc_status?: string
+          last_name?: string
+          lending_balance?: number
+          referral_code?: string | null
+          referred_by?: string | null
+          tier?: string
+          updated_at?: string
+          user_id: string
+          vault_balance?: number
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          first_name?: string
+          frozen_balance?: number
+          id?: string
+          kyc_status?: string
+          last_name?: string
+          lending_balance?: number
+          referral_code?: string | null
+          referred_by?: string | null
+          tier?: string
+          updated_at?: string
+          user_id?: string
+          vault_balance?: number
+        }
+        Relationships: []
+      }
+      profit_distribution_history: {
+        Row: {
+          created_at: string
+          distributed_amount: number
+          id: string
+          total_profit: number
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          distributed_amount?: number
+          id?: string
+          total_profit?: number
+          year: number
+        }
+        Update: {
+          created_at?: string
+          distributed_amount?: number
+          id?: string
+          total_profit?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          level: number
+          referred_user_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level: number
+          referred_user_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: number
+          referred_user_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_referral_code: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "member" | "governor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +420,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["member", "governor"],
+    },
   },
 } as const
