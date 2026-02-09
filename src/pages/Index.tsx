@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import LandingNav from "@/components/landing/LandingNav";
 import HeroSection from "@/components/landing/HeroSection";
 import AboutCooperative from "@/components/landing/AboutCooperative";
@@ -10,7 +11,12 @@ import LandingCTA from "@/components/landing/LandingCTA";
 import LandingFooter from "@/components/landing/LandingFooter";
 
 const Index = () => (
-  <div className="min-h-screen bg-background">
+  <motion.div
+    className="min-h-screen bg-background"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.3 }}
+  >
     <LandingNav />
     <HeroSection />
     <AboutCooperative />
@@ -21,7 +27,7 @@ const Index = () => (
     <FAQSection />
     <LandingCTA />
     <LandingFooter />
-  </div>
+  </motion.div>
 );
 
 export default Index;

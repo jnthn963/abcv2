@@ -1,7 +1,9 @@
+import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, TrendingUp, Users, Landmark } from "lucide-react";
 import alphaCoin from "@/assets/alpha-coin.png";
+import { fadeUp, staggerContainer } from "@/lib/animations";
 
 const stats = [
   { label: "Total Deposits", value: "₳2.4M", icon: Landmark },
@@ -20,25 +22,39 @@ const HeroSection = () => (
 
       <div className="container relative mx-auto grid gap-12 px-6 lg:grid-cols-2 lg:gap-20">
         {/* Left: Content */}
-        <div className="flex flex-col justify-center">
-          <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs text-muted-foreground">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" />
+        <motion.div
+          className="flex flex-col justify-center"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+        >
+          <motion.div
+            variants={fadeUp}
+            className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs text-muted-foreground"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
             Cooperative Banking Reimagined
-          </div>
+          </motion.div>
 
-          <h1 className="mb-6 font-display text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+          <motion.h1
+            variants={fadeUp}
+            className="mb-6 font-display text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl"
+          >
             Your Money,{" "}
             <span className="gold-text">Your Power,</span>{" "}
             Our Cooperative
-          </h1>
+          </motion.h1>
 
-          <p className="mb-8 max-w-lg text-base text-muted-foreground sm:text-lg">
+          <motion.p
+            variants={fadeUp}
+            className="mb-8 max-w-lg text-base text-muted-foreground sm:text-lg"
+          >
             Alpha Bankers Cooperative delivers sustainable lending yields,
             transparent governance, and community-driven growth. No fake
             interest. No hidden fees.
-          </p>
+          </motion.p>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+          <motion.div variants={fadeUp} className="flex flex-col gap-3 sm:flex-row sm:gap-4">
             <Button variant="gold" size="xl" asChild>
               <Link to="/register">
                 Join the Cooperative
@@ -48,11 +64,16 @@ const HeroSection = () => (
             <Button variant="gold-outline" size="xl" asChild>
               <Link to="/login">Member Login</Link>
             </Button>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Right: Coin illustration */}
-        <div className="flex items-center justify-center">
+        <motion.div
+          className="flex items-center justify-center"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.3 }}
+        >
           <div className="relative">
             <div className="absolute -inset-12 rounded-full bg-[radial-gradient(circle,hsl(43,72%,52%,0.12),transparent_70%)]" />
             <div className="relative h-48 w-48 sm:h-64 sm:w-64 lg:h-80 lg:w-80">
@@ -63,23 +84,33 @@ const HeroSection = () => (
               />
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
 
     {/* Stats Bar */}
     <section className="border-y border-border bg-card/50 py-12 sm:py-16">
-      <div className="container mx-auto grid grid-cols-2 gap-6 px-6 sm:gap-8 md:grid-cols-4">
+      <motion.div
+        className="container mx-auto grid grid-cols-2 gap-6 px-6 sm:gap-8 md:grid-cols-4"
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: "-50px" }}
+      >
         {stats.map((stat) => (
-          <div key={stat.label} className="flex flex-col items-center gap-2 text-center">
+          <motion.div
+            key={stat.label}
+            variants={fadeUp}
+            className="flex flex-col items-center gap-2 text-center"
+          >
             <stat.icon className="h-5 w-5 text-primary" />
             <p className="font-display text-2xl font-bold gold-text sm:text-3xl lg:text-4xl">
               {stat.value}
             </p>
             <p className="text-xs text-muted-foreground sm:text-sm">{stat.label}</p>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </section>
   </>
 );

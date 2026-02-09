@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -104,7 +105,7 @@ const Transactions = () => {
                 placeholder="Search transactions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 transition-shadow focus:shadow-[0_0_0_2px_hsl(43,72%,52%,0.2)]"
               />
             </div>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -121,44 +122,50 @@ const Transactions = () => {
         </CardContent>
       </Card>
 
-      <Card className="glass-card border-border">
-        <CardHeader>
-          <CardTitle className="font-display text-lg">
-            {filtered.length} Transaction{filtered.length !== 1 ? "s" : ""}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filtered.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground py-12">No transactions found</p>
-          ) : (
-            <div className="space-y-2">
-              {filtered.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="rounded-lg bg-primary/10 p-2 flex-shrink-0">
-                      {getIcon(tx.type)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{tx.description}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium capitalize">
-                          {tx.type.replace(/_/g, " ")}
-                        </span>
-                        <span className="text-xs text-muted-foreground">{formatDate(tx.created_at)}</span>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <Card className="glass-card border-border">
+          <CardHeader>
+            <CardTitle className="font-display text-lg">
+              {filtered.length} Transaction{filtered.length !== 1 ? "s" : ""}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filtered.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-12">No transactions found</p>
+            ) : (
+              <div className="space-y-2">
+                {filtered.map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3 transition-colors hover:bg-secondary/50">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="rounded-lg bg-primary/10 p-2 flex-shrink-0">
+                        {getIcon(tx.type)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{tx.description}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium capitalize">
+                            {tx.type.replace(/_/g, " ")}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{formatDate(tx.created_at)}</span>
+                        </div>
                       </div>
                     </div>
+                    <div className="text-right flex-shrink-0 ml-4">
+                      <p className={`text-sm font-semibold ${tx.amount >= 0 ? "text-success" : "text-destructive"}`}>
+                        {tx.amount >= 0 ? "+" : "-"}{formatCurrency(tx.amount)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right flex-shrink-0 ml-4">
-                    <p className={`text-sm font-semibold ${tx.amount >= 0 ? "text-success" : "text-destructive"}`}>
-                      {tx.amount >= 0 ? "+" : "-"}{formatCurrency(tx.amount)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
     </DashboardLayout>
   );
 };

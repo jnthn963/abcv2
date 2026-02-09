@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import DashboardLayout from "@/components/DashboardLayout";
 import BalanceCard from "@/components/BalanceCard";
 import LoanRequestModal from "@/components/LoanRequestModal";
@@ -10,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { staggerContainer, fadeUp } from "@/lib/animations";
 
 interface Loan {
   id: string;
@@ -102,7 +104,7 @@ const Lending = () => {
         </thead>
         <tbody className="text-sm">
           {loans.map((loan) => (
-            <tr key={loan.id} className="border-b border-border/50">
+            <tr key={loan.id} className="border-b border-border/50 transition-colors hover:bg-secondary/20">
               <td className="py-3 font-medium">{anonymize(loan.borrower_id)}</td>
               <td className="py-3">{formatCurrency(loan.principal)}</td>
               <td className="py-3 text-primary">{loan.interest_rate}%</td>
@@ -150,106 +152,117 @@ const Lending = () => {
         </Button>
       </div>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <BalanceCard title="Vault Balance" amount={formatCurrency(vaultBalance)} icon={Wallet} />
-        <BalanceCard title="Lending Balance" amount={formatCurrency(lendingBalance)} icon={TrendingUp} glowing />
-        <BalanceCard title="Frozen Collateral" amount={formatCurrency(frozenBalance)} icon={Lock} />
-        <BalanceCard title="Active Funded" amount={activeLoans.length.toString()} change={`${formatCurrency(activeLoans.reduce((s, l) => s + l.principal, 0))} locked`} changeType="neutral" icon={Landmark} />
-      </div>
+      <motion.div
+        className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={fadeUp}><BalanceCard title="Vault Balance" amount={formatCurrency(vaultBalance)} icon={Wallet} /></motion.div>
+        <motion.div variants={fadeUp}><BalanceCard title="Lending Balance" amount={formatCurrency(lendingBalance)} icon={TrendingUp} glowing /></motion.div>
+        <motion.div variants={fadeUp}><BalanceCard title="Frozen Collateral" amount={formatCurrency(frozenBalance)} icon={Lock} /></motion.div>
+        <motion.div variants={fadeUp}><BalanceCard title="Active Funded" amount={activeLoans.length.toString()} change={`${formatCurrency(activeLoans.reduce((s, l) => s + l.principal, 0))} locked`} changeType="neutral" icon={Landmark} /></motion.div>
+      </motion.div>
 
-      <Tabs defaultValue="marketplace" className="space-y-6">
-        <TabsList className="bg-secondary/50">
-          <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
-          <TabsTrigger value="borrowed">My Loans</TabsTrigger>
-          <TabsTrigger value="funded">Funded by Me</TabsTrigger>
-        </TabsList>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.4 }}
+      >
+        <Tabs defaultValue="marketplace" className="space-y-6">
+          <TabsList className="bg-secondary/50">
+            <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
+            <TabsTrigger value="borrowed">My Loans</TabsTrigger>
+            <TabsTrigger value="funded">Funded by Me</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="marketplace">
-          <Card className="glass-card border-border">
-            <CardHeader>
-              <CardTitle className="font-display text-lg">Available Loans</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {marketplaceLoans.length === 0 ? (
-                <p className="text-center text-sm text-muted-foreground py-8">No loans available in the marketplace</p>
-              ) : renderLoanTable(marketplaceLoans, "fund")}
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <TabsContent value="marketplace">
+            <Card className="glass-card border-border">
+              <CardHeader>
+                <CardTitle className="font-display text-lg">Available Loans</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {marketplaceLoans.length === 0 ? (
+                  <p className="text-center text-sm text-muted-foreground py-8">No loans available in the marketplace</p>
+                ) : renderLoanTable(marketplaceLoans, "fund")}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="borrowed">
-          <Card className="glass-card border-border">
-            <CardHeader>
-              <CardTitle className="font-display text-lg">My Borrowed Loans</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {myBorrowedLoans.length === 0 ? (
-                <p className="text-center text-sm text-muted-foreground py-8">You haven't borrowed any loans</p>
-              ) : (
-                <div className="space-y-3">
-                  {myBorrowedLoans.map((loan) => {
-                    const interest = calcInterest(loan);
-                    const total = loan.principal + interest;
-                    const daysElapsed = Math.max(1, Math.ceil((Date.now() - new Date(loan.created_at).getTime()) / 86400000));
-                    return (
-                      <div key={loan.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium">{formatCurrency(loan.principal)}</p>
-                            {statusBadge(loan.status)}
+          <TabsContent value="borrowed">
+            <Card className="glass-card border-border">
+              <CardHeader>
+                <CardTitle className="font-display text-lg">My Borrowed Loans</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {myBorrowedLoans.length === 0 ? (
+                  <p className="text-center text-sm text-muted-foreground py-8">You haven't borrowed any loans</p>
+                ) : (
+                  <div className="space-y-3">
+                    {myBorrowedLoans.map((loan) => {
+                      const interest = calcInterest(loan);
+                      const total = loan.principal + interest;
+                      const daysElapsed = Math.max(1, Math.ceil((Date.now() - new Date(loan.created_at).getTime()) / 86400000));
+                      return (
+                        <div key={loan.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3 transition-colors hover:bg-secondary/50">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">{formatCurrency(loan.principal)}</p>
+                              {statusBadge(loan.status)}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {daysElapsed}/{loan.duration_days} days · Interest: {formatCurrency(interest)} · Total: {formatCurrency(total)}
+                            </p>
+                            {loan.collateral_amount > 0 && (
+                              <p className="text-xs text-muted-foreground">Collateral: {formatCurrency(loan.collateral_amount)} frozen</p>
+                            )}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {daysElapsed}/{loan.duration_days} days · Interest: {formatCurrency(interest)} · Total: {formatCurrency(total)}
-                          </p>
-                          {loan.collateral_amount > 0 && (
-                            <p className="text-xs text-muted-foreground">Collateral: {formatCurrency(loan.collateral_amount)} frozen</p>
+                          {loan.status === "approved" && (
+                            <Button variant="gold" size="sm" onClick={() => { setSelectedLoan(loan); setRepayLoanOpen(true); }}>Repay</Button>
                           )}
                         </div>
-                        {loan.status === "approved" && (
-                          <Button variant="gold" size="sm" onClick={() => { setSelectedLoan(loan); setRepayLoanOpen(true); }}>Repay</Button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="funded">
-          <Card className="glass-card border-border">
-            <CardHeader>
-              <CardTitle className="font-display text-lg">Loans I've Funded</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {myFundedLoans.length === 0 ? (
-                <p className="text-center text-sm text-muted-foreground py-8">You haven't funded any loans yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {myFundedLoans.map((loan) => {
-                    const interest = calcInterest(loan);
-                    const daysElapsed = Math.max(1, Math.ceil((Date.now() - new Date(loan.created_at).getTime()) / 86400000));
-                    return (
-                      <div key={loan.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium">{formatCurrency(loan.principal)} → {anonymize(loan.borrower_id)}</p>
-                            {statusBadge(loan.status)}
+          <TabsContent value="funded">
+            <Card className="glass-card border-border">
+              <CardHeader>
+                <CardTitle className="font-display text-lg">Loans I've Funded</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {myFundedLoans.length === 0 ? (
+                  <p className="text-center text-sm text-muted-foreground py-8">You haven't funded any loans yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {myFundedLoans.map((loan) => {
+                      const interest = calcInterest(loan);
+                      const daysElapsed = Math.max(1, Math.ceil((Date.now() - new Date(loan.created_at).getTime()) / 86400000));
+                      return (
+                        <div key={loan.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3 transition-colors hover:bg-secondary/50">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">{formatCurrency(loan.principal)} → {anonymize(loan.borrower_id)}</p>
+                              {statusBadge(loan.status)}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {daysElapsed}/{loan.duration_days} days · Earning: {formatCurrency(interest)}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {daysElapsed}/{loan.duration_days} days · Earning: {formatCurrency(interest)}
-                          </p>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </motion.div>
 
       <LoanRequestModal open={loanRequestOpen} onOpenChange={setLoanRequestOpen} vaultBalance={vaultBalance} frozenBalance={frozenBalance} onSuccess={fetchData} />
       <FundLoanModal open={fundLoanOpen} onOpenChange={setFundLoanOpen} loan={selectedLoan} vaultBalance={vaultBalance} onSuccess={fetchData} />

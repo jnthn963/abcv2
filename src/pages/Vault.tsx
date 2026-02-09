@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import DashboardLayout from "@/components/DashboardLayout";
 import BalanceCard from "@/components/BalanceCard";
 import DepositModal from "@/components/DepositModal";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { staggerContainer, fadeUp } from "@/lib/animations";
 
 interface Deposit {
   id: string;
@@ -105,14 +107,24 @@ const Vault = () => {
         </div>
       </div>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <BalanceCard title="Total Balance" amount={formatCurrency(totalBalance)} icon={Wallet} glowing />
-        <BalanceCard title="Vault Balance" amount={formatCurrency(vaultBalance)} icon={Wallet} />
-        <BalanceCard title="Lending Balance" amount={formatCurrency(lendingBalance)} icon={TrendingUp} />
-        <BalanceCard title="Frozen Collateral" amount={formatCurrency(frozenBalance)} icon={Lock} />
-      </div>
+      <motion.div
+        className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={fadeUp}><BalanceCard title="Total Balance" amount={formatCurrency(totalBalance)} icon={Wallet} glowing /></motion.div>
+        <motion.div variants={fadeUp}><BalanceCard title="Vault Balance" amount={formatCurrency(vaultBalance)} icon={Wallet} /></motion.div>
+        <motion.div variants={fadeUp}><BalanceCard title="Lending Balance" amount={formatCurrency(lendingBalance)} icon={TrendingUp} /></motion.div>
+        <motion.div variants={fadeUp}><BalanceCard title="Frozen Collateral" amount={formatCurrency(frozenBalance)} icon={Lock} /></motion.div>
+      </motion.div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <motion.div
+        className="grid gap-6 lg:grid-cols-2"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.4 }}
+      >
         <Card className="glass-card border-border">
           <CardHeader>
             <CardTitle className="font-display text-lg">Deposit History</CardTitle>
@@ -123,7 +135,7 @@ const Vault = () => {
                 <p className="text-center text-sm text-muted-foreground py-8">No deposits yet</p>
               ) : (
                 deposits.map((dep) => (
-                  <div key={dep.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
+                  <div key={dep.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3 transition-colors hover:bg-secondary/50">
                     <div className="flex items-center gap-3">
                       <div className="rounded-lg bg-success/10 p-2">
                         <ArrowDownLeft className="h-4 w-4 text-success" />
@@ -151,7 +163,7 @@ const Vault = () => {
                 <p className="text-center text-sm text-muted-foreground py-8">No withdrawals yet</p>
               ) : (
                 withdrawals.map((w) => (
-                  <div key={w.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
+                  <div key={w.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3 transition-colors hover:bg-secondary/50">
                     <div className="flex items-center gap-3">
                       <div className="rounded-lg bg-destructive/10 p-2">
                         <ArrowUpRight className="h-4 w-4 text-destructive" />
@@ -168,7 +180,7 @@ const Vault = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       <DepositModal open={depositOpen} onOpenChange={setDepositOpen} onSuccess={fetchData} />
       <WithdrawalModal open={withdrawOpen} onOpenChange={setWithdrawOpen} vaultBalance={vaultBalance} onSuccess={fetchData} />

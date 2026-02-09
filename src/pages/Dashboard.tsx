@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import DashboardLayout from "@/components/DashboardLayout";
 import BalanceCard from "@/components/BalanceCard";
 import DepositModal from "@/components/DepositModal";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { staggerContainer, fadeUp } from "@/lib/animations";
 
 interface Profile {
   vault_balance: number;
@@ -112,15 +114,33 @@ const Dashboard = () => {
       </div>
 
       {/* Balance Cards */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <BalanceCard title="Vault Balance" amount={formatCurrency(profile?.vault_balance ?? 0)} change="" changeType="neutral" icon={Wallet} glowing />
-        <BalanceCard title="Lending Balance" amount={formatCurrency(profile?.lending_balance ?? 0)} change="" changeType="neutral" icon={TrendingUp} />
-        <BalanceCard title="Frozen Collateral" amount={formatCurrency(profile?.frozen_balance ?? 0)} change="" changeType="neutral" icon={Lock} />
-        <BalanceCard title="Referral Earnings" amount={formatCurrency(referralEarnings)} change={`${referralCount} referrals`} changeType="positive" icon={Users} />
-      </div>
+      <motion.div
+        className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={fadeUp}>
+          <BalanceCard title="Vault Balance" amount={formatCurrency(profile?.vault_balance ?? 0)} change="" changeType="neutral" icon={Wallet} glowing />
+        </motion.div>
+        <motion.div variants={fadeUp}>
+          <BalanceCard title="Lending Balance" amount={formatCurrency(profile?.lending_balance ?? 0)} change="" changeType="neutral" icon={TrendingUp} />
+        </motion.div>
+        <motion.div variants={fadeUp}>
+          <BalanceCard title="Frozen Collateral" amount={formatCurrency(profile?.frozen_balance ?? 0)} change="" changeType="neutral" icon={Lock} />
+        </motion.div>
+        <motion.div variants={fadeUp}>
+          <BalanceCard title="Referral Earnings" amount={formatCurrency(referralEarnings)} change={`${referralCount} referrals`} changeType="positive" icon={Users} />
+        </motion.div>
+      </motion.div>
 
       {/* Quick Actions + Recent Transactions */}
-      <div className="mb-8 grid gap-6 lg:grid-cols-3">
+      <motion.div
+        className="mb-8 grid gap-6 lg:grid-cols-3"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.4 }}
+      >
         <Card className="glass-card border-border">
           <CardHeader>
             <CardTitle className="font-display text-lg">Quick Actions</CardTitle>
@@ -155,7 +175,7 @@ const Dashboard = () => {
                 <p className="text-center text-sm text-muted-foreground py-8">No transactions yet</p>
               ) : (
                 transactions.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
+                  <div key={tx.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3 transition-colors hover:bg-secondary/50">
                     <div className="flex items-center gap-3">
                       <div className="rounded-lg bg-primary/10 p-2">{getTransactionIcon(tx.type)}</div>
                       <div>
@@ -175,91 +195,103 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       {/* Lending Marketplace */}
-      <Card className="glass-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="font-display text-lg">Lending Marketplace</CardTitle>
-          <Button variant="gold" size="sm" onClick={() => setLoanRequestOpen(true)}>Request Loan</Button>
-        </CardHeader>
-        <CardContent>
-          {loans.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground py-8">No open loans in the marketplace</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                    <th className="pb-3 font-medium">Borrower</th>
-                    <th className="pb-3 font-medium">Amount</th>
-                    <th className="pb-3 font-medium">Interest</th>
-                    <th className="pb-3 font-medium">Duration</th>
-                    <th className="pb-3 font-medium">Collateral</th>
-                    <th className="pb-3 font-medium">Status</th>
-                    <th className="pb-3 font-medium">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm">
-                  {loans.map((loan) => (
-                    <tr key={loan.id} className="border-b border-border/50">
-                      <td className="py-3 font-medium">{anonymizeBorrower(loan.borrower_id)}</td>
-                      <td className="py-3">{formatCurrency(loan.principal)}</td>
-                      <td className="py-3 text-primary">{loan.interest_rate}%</td>
-                      <td className="py-3">{loan.duration_days} days</td>
-                      <td className="py-3">{formatCurrency(loan.collateral_amount)}</td>
-                      <td className="py-3">
-                        <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success capitalize">{loan.status}</span>
-                      </td>
-                      <td className="py-3">
-                        {loan.status === "pending" && loan.borrower_id !== user?.id && (
-                          <Button variant="gold-outline" size="sm" onClick={() => { setSelectedLoan(loan); setFundLoanOpen(true); }}>Fund</Button>
-                        )}
-                      </td>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45, duration: 0.4 }}
+      >
+        <Card className="glass-card border-border">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="font-display text-lg">Lending Marketplace</CardTitle>
+            <Button variant="gold" size="sm" onClick={() => setLoanRequestOpen(true)}>Request Loan</Button>
+          </CardHeader>
+          <CardContent>
+            {loans.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-8">No open loans in the marketplace</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                      <th className="pb-3 font-medium">Borrower</th>
+                      <th className="pb-3 font-medium">Amount</th>
+                      <th className="pb-3 font-medium">Interest</th>
+                      <th className="pb-3 font-medium">Duration</th>
+                      <th className="pb-3 font-medium">Collateral</th>
+                      <th className="pb-3 font-medium">Status</th>
+                      <th className="pb-3 font-medium">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </thead>
+                  <tbody className="text-sm">
+                    {loans.map((loan) => (
+                      <tr key={loan.id} className="border-b border-border/50 transition-colors hover:bg-secondary/20">
+                        <td className="py-3 font-medium">{anonymizeBorrower(loan.borrower_id)}</td>
+                        <td className="py-3">{formatCurrency(loan.principal)}</td>
+                        <td className="py-3 text-primary">{loan.interest_rate}%</td>
+                        <td className="py-3">{loan.duration_days} days</td>
+                        <td className="py-3">{formatCurrency(loan.collateral_amount)}</td>
+                        <td className="py-3">
+                          <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success capitalize">{loan.status}</span>
+                        </td>
+                        <td className="py-3">
+                          {loan.status === "pending" && loan.borrower_id !== user?.id && (
+                            <Button variant="gold-outline" size="sm" onClick={() => { setSelectedLoan(loan); setFundLoanOpen(true); }}>Fund</Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* My Active Loans */}
       {myActiveLoans.length > 0 && (
-        <Card className="glass-card border-border mt-8">
-          <CardHeader>
-            <CardTitle className="font-display text-lg">My Active Loans</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {myActiveLoans.map((loan) => {
-                const daysElapsed = Math.max(1, Math.ceil((Date.now() - new Date(loan.created_at).getTime()) / 86400000));
-                const interest = loan.principal * (loan.interest_rate / 100) * (daysElapsed / 365);
-                const totalOwed = loan.principal + interest;
-                return (
-                  <div key={loan.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{formatCurrency(loan.principal)} loan</p>
-                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{loan.interest_rate}% p.a.</span>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55, duration: 0.4 }}
+        >
+          <Card className="glass-card border-border mt-8">
+            <CardHeader>
+              <CardTitle className="font-display text-lg">My Active Loans</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {myActiveLoans.map((loan) => {
+                  const daysElapsed = Math.max(1, Math.ceil((Date.now() - new Date(loan.created_at).getTime()) / 86400000));
+                  const interest = loan.principal * (loan.interest_rate / 100) * (daysElapsed / 365);
+                  const totalOwed = loan.principal + interest;
+                  return (
+                    <div key={loan.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3 transition-colors hover:bg-secondary/50">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">{formatCurrency(loan.principal)} loan</p>
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{loan.interest_rate}% p.a.</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {daysElapsed} of {loan.duration_days} days · Interest: {formatCurrency(Math.round(interest * 100) / 100)} · Total: {formatCurrency(Math.round(totalOwed * 100) / 100)}
+                        </p>
+                        {loan.collateral_amount > 0 && (
+                          <p className="text-xs text-muted-foreground">Collateral: {formatCurrency(loan.collateral_amount)} (frozen)</p>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {daysElapsed} of {loan.duration_days} days · Interest: {formatCurrency(Math.round(interest * 100) / 100)} · Total: {formatCurrency(Math.round(totalOwed * 100) / 100)}
-                      </p>
-                      {loan.collateral_amount > 0 && (
-                        <p className="text-xs text-muted-foreground">Collateral: {formatCurrency(loan.collateral_amount)} (frozen)</p>
-                      )}
+                      <Button variant="gold" size="sm" onClick={() => { setSelectedLoan(loan); setRepayLoanOpen(true); }}>
+                        Repay
+                      </Button>
                     </div>
-                    <Button variant="gold" size="sm" onClick={() => { setSelectedLoan(loan); setRepayLoanOpen(true); }}>
-                      Repay
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       )}
 
       <DepositModal open={depositOpen} onOpenChange={setDepositOpen} onSuccess={fetchData} />

@@ -7,6 +7,7 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import SuccessAnimation from "@/components/SuccessAnimation";
 
 interface WithdrawalModalProps {
   open: boolean;
@@ -95,22 +96,23 @@ const WithdrawalModal = ({ open, onOpenChange, vaultBalance, onSuccess }: Withdr
                 placeholder="Enter amount"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                className="transition-shadow focus:shadow-[0_0_0_2px_hsl(43,72%,52%,0.2)]"
               />
             </div>
 
             <div className="space-y-2">
               <Label>Bank Name</Label>
-              <Input placeholder="e.g. GCash, BDO, BPI" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+              <Input placeholder="e.g. GCash, BDO, BPI" value={bankName} onChange={(e) => setBankName(e.target.value)} className="transition-shadow focus:shadow-[0_0_0_2px_hsl(43,72%,52%,0.2)]" />
             </div>
 
             <div className="space-y-2">
               <Label>Account Number</Label>
-              <Input placeholder="Account number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} />
+              <Input placeholder="Account number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} className="transition-shadow focus:shadow-[0_0_0_2px_hsl(43,72%,52%,0.2)]" />
             </div>
 
             <div className="space-y-2">
               <Label>Account Holder Name</Label>
-              <Input placeholder="Full name on account" value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} />
+              <Input placeholder="Full name on account" value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} className="transition-shadow focus:shadow-[0_0_0_2px_hsl(43,72%,52%,0.2)]" />
             </div>
 
             {parsedAmount > 0 && (
@@ -158,17 +160,10 @@ const WithdrawalModal = ({ open, onOpenChange, vaultBalance, onSuccess }: Withdr
         )}
 
         {step === "done" && (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <div className="h-16 w-16 rounded-full bg-success/20 flex items-center justify-center">
-              <svg className="h-8 w-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p className="font-display font-semibold">Withdrawal Requested!</p>
-            <p className="text-sm text-muted-foreground text-center">
-              ₳{parsedAmount.toLocaleString()} will be sent after governor approval.
-            </p>
-          </div>
+          <SuccessAnimation
+            title="Withdrawal Requested!"
+            description={`₳${parsedAmount.toLocaleString()} will be sent after governor approval.`}
+          />
         )}
       </DialogContent>
     </Dialog>
