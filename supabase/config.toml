@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.fund-loan]
 verify_jwt = false
+
+[functions.repay-loan]
+verify_jwt = false
