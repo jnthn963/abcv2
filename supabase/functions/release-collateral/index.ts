@@ -15,7 +15,28 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Find loans that are approved, have collateral, and whose term has ended
+    // Auth check: require governor or cron invocation
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.replace("Bearer ", "");
+      const anonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+      if (token !== anonKey) {
+        const userClient = createClient(supabaseUrl, anonKey, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: { user }, error: authErr } = await userClient.auth.getUser();
+        if (authErr || !user) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+        }
+        const { data: roleData } = await admin.from("user_roles").select("role").eq("user_id", user.id).eq("role", "governor").maybeSingle();
+        if (!roleData) {
+          return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
+        }
+      }
+    } else {
+      return new Response(JSON.stringify({ error: "Missing authorization" }), { status: 401, headers: corsHeaders });
+    }
+
     const { data: loans } = await admin.from("loans").select("*").eq("status", "approved");
 
     if (!loans || loans.length === 0) {
@@ -32,7 +53,6 @@ Deno.serve(async (req) => {
       if (now < loanEnd) continue;
       if (loan.collateral_amount <= 0) continue;
 
-      // Release collateral: move from frozen to vault
       const { data: profile } = await admin.from("profiles")
         .select("vault_balance, frozen_balance")
         .eq("user_id", loan.borrower_id)
@@ -53,7 +73,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Mark loan as completed
       await admin.from("loans").update({ status: "completed" }).eq("id", loan.id);
       released++;
     }

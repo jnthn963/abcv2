@@ -50,9 +50,7 @@ const DepositModal = ({ open, onOpenChange, onSuccess }: DepositModalProps) => {
       const { error: uploadErr } = await supabase.storage.from("deposit-proofs").upload(filePath, file);
       if (uploadErr) throw uploadErr;
 
-      const { data: urlData } = supabase.storage.from("deposit-proofs").getPublicUrl(filePath);
-
-      // Create deposit record
+      // Create deposit record (store file path, not public URL - bucket is private)
       const { error: insertErr } = await supabase.from("deposits").insert({
         user_id: user.id,
         amount: parseFloat(amount),

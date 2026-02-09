@@ -15,6 +15,30 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey);
 
+    // Auth check: require governor or cron invocation via Authorization header
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.replace("Bearer ", "");
+      const anonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+      // If it's not the anon key (cron), verify it's a governor
+      if (token !== anonKey) {
+        const userClient = createClient(supabaseUrl, anonKey, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: { user }, error: authErr } = await userClient.auth.getUser();
+        if (authErr || !user) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+        }
+        const { data: roleData } = await admin.from("user_roles").select("role").eq("user_id", user.id).eq("role", "governor").maybeSingle();
+        if (!roleData) {
+          return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
+        }
+      }
+      // If token === anonKey, it's the cron job — allowed
+    } else {
+      return new Response(JSON.stringify({ error: "Missing authorization" }), { status: 401, headers: corsHeaders });
+    }
+
     // Get settings
     const { data: settings } = await admin.from("settings").select("key, value");
     const settingsMap: Record<string, string> = {};
@@ -38,7 +62,6 @@ Deno.serve(async (req) => {
       const lenderShare = dailyInterest * lenderSharePct;
       const systemShare = dailyInterest - lenderShare;
 
-      // Credit lender
       if (loan.lender_id) {
         const { data: lenderProfile } = await admin.from("profiles").select("lending_balance").eq("user_id", loan.lender_id).single();
         if (lenderProfile) {
@@ -56,7 +79,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Record system income
       if (systemShare > 0) {
         await admin.from("admin_income_ledger").insert({
           type: "interest_spread",
