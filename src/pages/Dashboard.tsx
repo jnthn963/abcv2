@@ -8,6 +8,7 @@ import LoanRequestModal from "@/components/LoanRequestModal";
 import FundLoanModal from "@/components/FundLoanModal";
 import RepayLoanModal from "@/components/RepayLoanModal";
 import { Wallet, TrendingUp, Lock, Users, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +42,7 @@ interface Loan {
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [transactions, setTransactions] = useState<LedgerEntry[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -158,7 +160,7 @@ const Dashboard = () => {
               <TrendingUp className="h-5 w-5" />
               <span className="text-xs">Request Loan</span>
             </Button>
-            <Button variant="secondary" className="h-auto flex-col gap-2 py-4">
+            <Button variant="secondary" className="h-auto flex-col gap-2 py-4" onClick={() => navigate("/dashboard/referrals")}>
               <Users className="h-5 w-5" />
               <span className="text-xs">Refer</span>
             </Button>
