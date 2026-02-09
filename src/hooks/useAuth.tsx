@@ -26,6 +26,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGovernor, setIsGovernor] = useState(false);
 
+  // UI-only role check: used solely for conditional rendering (e.g. showing governor nav links).
+  // All privileged operations are re-validated server-side in edge functions.
   const checkGovernorRole = async (userId: string) => {
     const { data } = await supabase
       .from("user_roles")
