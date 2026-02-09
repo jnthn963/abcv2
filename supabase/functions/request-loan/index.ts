@@ -97,7 +97,8 @@ Deno.serve(async (req) => {
     if (loanErr) throw loanErr;
 
     return new Response(JSON.stringify({ success: true, loanId: loan.id }), { headers: corsHeaders });
-  } catch (e) {
+  } catch (e: any) {
+    console.error('request-loan error:', { error: e?.message, stack: e?.stack, timestamp: new Date().toISOString() });
     return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: corsHeaders });
   }
 });

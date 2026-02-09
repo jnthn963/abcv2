@@ -66,7 +66,8 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ success: true, action: "approved", netAmount: result.net_amount, fee: result.fee }), { headers: corsHeaders });
-  } catch (e) {
+  } catch (e: any) {
+    console.error('approve-deposit error:', { error: e?.message, stack: e?.stack, timestamp: new Date().toISOString() });
     return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: corsHeaders });
   }
 });

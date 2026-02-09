@@ -74,7 +74,8 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ message: "Interest distributed", processed }), { headers: corsHeaders });
-  } catch (e) {
+  } catch (e: any) {
+    console.error('daily-interest error:', { error: e?.message, stack: e?.stack, timestamp: new Date().toISOString() });
     return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: corsHeaders });
   }
 });

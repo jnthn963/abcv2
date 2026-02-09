@@ -46,7 +46,8 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
-  } catch (e) {
+  } catch (e: any) {
+    console.error('fund-loan error:', { error: e?.message, stack: e?.stack, timestamp: new Date().toISOString() });
     return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: corsHeaders });
   }
 });

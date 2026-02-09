@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,6 +63,7 @@ const DashboardHeader = () => {
 
   const handleSignOut = async () => {
     await signOut();
+    toast.success("Successfully signed out");
     navigate("/login");
   };
 

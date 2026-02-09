@@ -59,7 +59,8 @@ Deno.serve(async (req) => {
     await admin.from("loans").update({ status: "pending" }).eq("id", loanId);
 
     return new Response(JSON.stringify({ success: true, action: "approved" }), { headers: corsHeaders });
-  } catch (e) {
+  } catch (e: any) {
+    console.error('manage-loan error:', { error: e?.message, stack: e?.stack, timestamp: new Date().toISOString() });
     return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: corsHeaders });
   }
 });
