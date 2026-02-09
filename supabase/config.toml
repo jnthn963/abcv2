@@ -26,6 +26,3 @@ verify_jwt = false
 
 [functions.manage-loan]
 verify_jwt = false
-
-[functions.seed-governor]
-verify_jwt = false
