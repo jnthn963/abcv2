@@ -5,6 +5,7 @@ import DepositModal from "@/components/DepositModal";
 import WithdrawalModal from "@/components/WithdrawalModal";
 import LoanRequestModal from "@/components/LoanRequestModal";
 import FundLoanModal from "@/components/FundLoanModal";
+import RepayLoanModal from "@/components/RepayLoanModal";
 import { Wallet, TrendingUp, Lock, Users, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,7 @@ interface Loan {
   duration_days: number;
   collateral_amount: number;
   status: string;
+  created_at: string;
 }
 
 const Dashboard = () => {
@@ -40,6 +42,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [transactions, setTransactions] = useState<LedgerEntry[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
+  const [myActiveLoans, setMyActiveLoans] = useState<Loan[]>([]);
   const [referralCount, setReferralCount] = useState(0);
   const [referralEarnings, setReferralEarnings] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,16 +50,18 @@ const Dashboard = () => {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [loanRequestOpen, setLoanRequestOpen] = useState(false);
   const [fundLoanOpen, setFundLoanOpen] = useState(false);
+  const [repayLoanOpen, setRepayLoanOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
     setIsLoading(true);
 
-    const [profileRes, ledgerRes, loansRes, referralsRes, referralEarningsRes] = await Promise.all([
+    const [profileRes, ledgerRes, loansRes, myLoansRes, referralsRes, referralEarningsRes] = await Promise.all([
       supabase.from("profiles").select("vault_balance, lending_balance, frozen_balance").eq("user_id", user.id).single(),
       supabase.from("ledger").select("id, type, amount, description, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(10),
-      supabase.from("loans").select("id, borrower_id, principal, interest_rate, duration_days, collateral_amount, status").in("status", ["approved", "pending"]).order("created_at", { ascending: false }).limit(10),
+      supabase.from("loans").select("id, borrower_id, principal, interest_rate, duration_days, collateral_amount, status, created_at").in("status", ["approved", "pending"]).order("created_at", { ascending: false }).limit(10),
+      supabase.from("loans").select("id, borrower_id, principal, interest_rate, duration_days, collateral_amount, status, created_at").eq("borrower_id", user.id).eq("status", "approved").order("created_at", { ascending: false }),
       supabase.from("referrals").select("id").eq("user_id", user.id),
       supabase.from("ledger").select("amount").eq("user_id", user.id).eq("type", "referral"),
     ]);
@@ -64,6 +69,7 @@ const Dashboard = () => {
     if (profileRes.data) setProfile(profileRes.data);
     if (ledgerRes.data) setTransactions(ledgerRes.data);
     if (loansRes.data) setLoans(loansRes.data);
+    if (myLoansRes.data) setMyActiveLoans(myLoansRes.data);
     if (referralsRes.data) setReferralCount(referralsRes.data.length);
     if (referralEarningsRes.data) {
       setReferralEarnings(referralEarningsRes.data.reduce((sum, r) => sum + r.amount, 0));
@@ -222,10 +228,48 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
+        {/* My Active Loans */}
+        {myActiveLoans.length > 0 && (
+          <Card className="glass-card border-border mt-8">
+            <CardHeader>
+              <CardTitle className="font-display text-lg">My Active Loans</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {myActiveLoans.map((loan) => {
+                  const daysElapsed = Math.max(1, Math.ceil((Date.now() - new Date(loan.created_at).getTime()) / 86400000));
+                  const interest = loan.principal * (loan.interest_rate / 100) * (daysElapsed / 365);
+                  const totalOwed = loan.principal + interest;
+                  return (
+                    <div key={loan.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">{formatCurrency(loan.principal)} loan</p>
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{loan.interest_rate}% p.a.</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {daysElapsed} of {loan.duration_days} days · Interest: {formatCurrency(Math.round(interest * 100) / 100)} · Total: {formatCurrency(Math.round(totalOwed * 100) / 100)}
+                        </p>
+                        {loan.collateral_amount > 0 && (
+                          <p className="text-xs text-muted-foreground">Collateral: {formatCurrency(loan.collateral_amount)} (frozen)</p>
+                        )}
+                      </div>
+                      <Button variant="gold" size="sm" onClick={() => { setSelectedLoan(loan); setRepayLoanOpen(true); }}>
+                        Repay
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <DepositModal open={depositOpen} onOpenChange={setDepositOpen} onSuccess={fetchData} />
         <WithdrawalModal open={withdrawOpen} onOpenChange={setWithdrawOpen} vaultBalance={profile?.vault_balance ?? 0} onSuccess={fetchData} />
         <LoanRequestModal open={loanRequestOpen} onOpenChange={setLoanRequestOpen} vaultBalance={profile?.vault_balance ?? 0} frozenBalance={profile?.frozen_balance ?? 0} onSuccess={fetchData} />
         <FundLoanModal open={fundLoanOpen} onOpenChange={setFundLoanOpen} loan={selectedLoan} vaultBalance={profile?.vault_balance ?? 0} onSuccess={fetchData} />
+        <RepayLoanModal open={repayLoanOpen} onOpenChange={setRepayLoanOpen} loan={selectedLoan} vaultBalance={profile?.vault_balance ?? 0} onSuccess={fetchData} />
       </main>
     </div>
   );
