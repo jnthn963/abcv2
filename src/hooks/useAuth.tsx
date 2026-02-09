@@ -37,8 +37,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    // Set up auth listener FIRST, then check current session
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -47,9 +48,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsGovernor(false);
         }
         setIsLoading(false);
+
+        // On logout or token expiry, force redirect to landing
+        if (event === "SIGNED_OUT" || (event === "TOKEN_REFRESHED" && !session)) {
+          setUser(null);
+          setSession(null);
+          setIsGovernor(false);
+          window.location.replace("/");
+        }
       }
     );
 
+    // Re-validate session from backend on every page load (no cached assumptions)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);

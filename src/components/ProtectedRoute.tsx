@@ -18,7 +18,7 @@ const ProtectedRoute = ({ children, requireGovernor = false }: ProtectedRoutePro
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (requireGovernor && !isGovernor) {
