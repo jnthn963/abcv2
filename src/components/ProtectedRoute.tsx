@@ -18,7 +18,11 @@ const ProtectedRoute = ({ children, requireGovernor = false }: ProtectedRoutePro
   }
 
   if (!user) {
-    return <Navigate to="/" replace />;
+    const currentPath = window.location.pathname;
+    const redirectParam = currentPath && currentPath !== "/" && currentPath !== "/login"
+      ? `?redirectTo=${encodeURIComponent(currentPath)}`
+      : "";
+    return <Navigate to={`/login${redirectParam}`} replace />;
   }
 
   if (requireGovernor && !isGovernor) {

@@ -112,10 +112,11 @@ const GovernorSettings = () => {
     }
     setUploadingQr(true);
     try {
-      const ext = qrFile.name.split(".").pop()?.toLowerCase() || "jpg";
-      const filePath = `current-qr.${ext}`;
-      await supabase.storage.from("qr-codes").remove([filePath]);
-      const { error: uploadErr } = await supabase.storage.from("qr-codes").upload(filePath, qrFile, { upsert: true });
+      // Always use a fixed filename to avoid stale files from different extensions
+      const filePath = "current-qr.png";
+      // Remove any old files with different extensions
+      await supabase.storage.from("qr-codes").remove(["current-qr.png", "current-qr.jpg", "current-qr.jpeg", "current-qr.webp"]);
+      const { error: uploadErr } = await supabase.storage.from("qr-codes").upload(filePath, qrFile, { upsert: true, cacheControl: "0" });
       if (uploadErr) throw uploadErr;
       const { data: urlData } = supabase.storage.from("qr-codes").getPublicUrl(filePath);
       

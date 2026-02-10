@@ -51,12 +51,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         setIsLoading(false);
 
-        // On logout or token expiry, force redirect to landing
+        // On logout or token expiry, redirect to login with return path
         if (event === "SIGNED_OUT" || (event === "TOKEN_REFRESHED" && !session)) {
           setUser(null);
           setSession(null);
           setIsGovernor(false);
-          window.location.replace("/");
+          const currentPath = window.location.pathname;
+          const redirectParam = currentPath && currentPath !== "/" && currentPath !== "/login" && currentPath !== "/register"
+            ? `?redirectTo=${encodeURIComponent(currentPath)}`
+            : "";
+          window.location.replace(`/login${redirectParam}`);
         }
       }
     );
