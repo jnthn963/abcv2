@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,7 +56,8 @@ const Login = () => {
         return;
       }
 
-      navigate("/dashboard");
+      const redirectTo = searchParams.get("redirectTo");
+      navigate(redirectTo && redirectTo.startsWith("/") ? redirectTo : "/dashboard");
     } catch {
       toast({
         title: "Error",
