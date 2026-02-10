@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import DashboardLayout from "@/components/DashboardLayout";
+import TransactionLoader from "@/components/TransactionLoader";
 import BalanceCard from "@/components/BalanceCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -151,6 +153,8 @@ const Governor = () => {
 
   const anonymize = (id: string) => `M-${id.substring(0, 4).toUpperCase()}`;
 
+  const [slidingOutId, setSlidingOutId] = useState<string | null>(null);
+
   const handleDepositAction = async (depositId: string, action: "approved" | "rejected") => {
     setProcessingId(depositId);
     try {
@@ -159,8 +163,12 @@ const Governor = () => {
       });
       if (res.error) throw res.error;
       toast({ title: `Deposit ${action}`, description: `The deposit has been ${action}.` });
-      setPendingDeposits((prev) => prev.filter((d) => d.id !== depositId));
-      fetchData();
+      setSlidingOutId(depositId);
+      setTimeout(() => {
+        setPendingDeposits((prev) => prev.filter((d) => d.id !== depositId));
+        setSlidingOutId(null);
+        fetchData();
+      }, 600);
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to process", variant: "destructive" });
     }
@@ -175,8 +183,12 @@ const Governor = () => {
       });
       if (res.error) throw res.error;
       toast({ title: `Withdrawal ${action}`, description: `The withdrawal has been ${action}.` });
-      setPendingWithdrawals((prev) => prev.filter((w) => w.id !== withdrawalId));
-      fetchData();
+      setSlidingOutId(withdrawalId);
+      setTimeout(() => {
+        setPendingWithdrawals((prev) => prev.filter((w) => w.id !== withdrawalId));
+        setSlidingOutId(null);
+        fetchData();
+      }, 600);
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to process", variant: "destructive" });
     }
@@ -417,33 +429,57 @@ const Governor = () => {
                   {pendingDeposits.length === 0 ? (
                     <p className="text-center text-sm text-muted-foreground py-4">No pending deposits</p>
                   ) : (
-                    pendingDeposits.map((dep) => (
-                      <div key={dep.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3">
-                        <div>
-                          <p className="text-sm font-medium">{anonymize(dep.user_id)}</p>
-                          <p className="text-xs text-muted-foreground">{formatCurrency(dep.amount)} · {formatDate(dep.created_at)}</p>
-                          {dep.proof_url && (
-                            <button
-                              className="text-xs text-primary underline mt-0.5"
-                              onClick={async () => {
-                                const { data } = await supabase.storage.from("deposit-proofs").createSignedUrl(dep.proof_url!, 300);
-                                if (data?.signedUrl) window.open(data.signedUrl, "_blank");
-                              }}
-                            >
-                              View Proof
-                            </button>
+                    <AnimatePresence>
+                      {pendingDeposits.map((dep) => (
+                        <motion.div
+                          key={dep.id}
+                          layout
+                          initial={{ opacity: 1, x: 0 }}
+                          animate={slidingOutId === dep.id
+                            ? { opacity: 0, x: 300, transition: { duration: 0.5 } }
+                            : { opacity: 1, x: 0 }
+                          }
+                          exit={{ opacity: 0, x: 300 }}
+                          className="relative flex items-center justify-between rounded-lg bg-secondary/30 px-4 py-3"
+                        >
+                          {processingId === dep.id && (
+                            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/70 backdrop-blur-sm">
+                              <motion.span
+                                className="font-display text-sm font-semibold"
+                                style={{ color: "hsl(43, 96%, 56%)", textShadow: "0 0 12px hsla(43, 96%, 56%, 0.5)" }}
+                                animate={{ opacity: [1, 0.5, 1] }}
+                                transition={{ duration: 1.2, repeat: Infinity }}
+                              >
+                                Atomic Update in Progress...
+                              </motion.span>
+                            </div>
                           )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-success hover:text-success" disabled={processingId === dep.id} onClick={() => handleDepositAction(dep.id, "approved")}>
-                            {processingId === dep.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" disabled={processingId === dep.id} onClick={() => handleDepositAction(dep.id, "rejected")}>
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
+                          <div>
+                            <p className="text-sm font-medium">{anonymize(dep.user_id)}</p>
+                            <p className="text-xs text-muted-foreground">{formatCurrency(dep.amount)} · {formatDate(dep.created_at)}</p>
+                            {dep.proof_url && (
+                              <button
+                                className="text-xs text-primary underline mt-0.5"
+                                onClick={async () => {
+                                  const { data } = await supabase.storage.from("deposit-proofs").createSignedUrl(dep.proof_url!, 300);
+                                  if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                                }}
+                              >
+                                View Proof
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-success hover:text-success" disabled={processingId === dep.id} onClick={() => handleDepositAction(dep.id, "approved")}>
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" disabled={processingId === dep.id} onClick={() => handleDepositAction(dep.id, "rejected")}>
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                   )}
                 </CardContent>
               </Card>
@@ -456,29 +492,53 @@ const Governor = () => {
                   {pendingWithdrawals.length === 0 ? (
                     <p className="text-center text-sm text-muted-foreground py-4">No pending withdrawals</p>
                   ) : (
-                    pendingWithdrawals.map((w) => (
-                      <div key={w.id} className="rounded-lg bg-secondary/30 px-4 py-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium">{anonymize(w.user_id)}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatCurrency(w.amount)} + ₳{w.fee.toFixed(2)} fee · {formatDate(w.created_at)}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {w.bank_name} · ****{w.account_number.slice(-4)} · {w.account_holder}
-                            </p>
+                    <AnimatePresence>
+                      {pendingWithdrawals.map((w) => (
+                        <motion.div
+                          key={w.id}
+                          layout
+                          initial={{ opacity: 1, x: 0 }}
+                          animate={slidingOutId === w.id
+                            ? { opacity: 0, x: 300, transition: { duration: 0.5 } }
+                            : { opacity: 1, x: 0 }
+                          }
+                          exit={{ opacity: 0, x: 300 }}
+                          className="relative rounded-lg bg-secondary/30 px-4 py-3"
+                        >
+                          {processingId === w.id && (
+                            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/70 backdrop-blur-sm">
+                              <motion.span
+                                className="font-display text-sm font-semibold"
+                                style={{ color: "hsl(43, 96%, 56%)", textShadow: "0 0 12px hsla(43, 96%, 56%, 0.5)" }}
+                                animate={{ opacity: [1, 0.5, 1] }}
+                                transition={{ duration: 1.2, repeat: Infinity }}
+                              >
+                                Atomic Update in Progress...
+                              </motion.span>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">{anonymize(w.user_id)}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatCurrency(w.amount)} + ₳{w.fee.toFixed(2)} fee · {formatDate(w.created_at)}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {w.bank_name} · ****{w.account_number.slice(-4)} · {w.account_holder}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-success hover:text-success" disabled={processingId === w.id} onClick={() => handleWithdrawalAction(w.id, "approved")}>
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" disabled={processingId === w.id} onClick={() => handleWithdrawalAction(w.id, "rejected")}>
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-success hover:text-success" disabled={processingId === w.id} onClick={() => handleWithdrawalAction(w.id, "approved")}>
-                              {processingId === w.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" disabled={processingId === w.id} onClick={() => handleWithdrawalAction(w.id, "rejected")}>
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                   )}
                 </CardContent>
               </Card>
